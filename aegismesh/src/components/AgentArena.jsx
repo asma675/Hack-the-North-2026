@@ -13,14 +13,14 @@ import { useAegis } from '@/lib/useAegis';
 //          Executor
 
 const POSITIONS = {
-  'commander-01': { x: 50, y: 8 },
-  'security-02': { x: 25, y: 28 },
-  'network-01': { x: 75, y: 28 },
-  'telemetry-03': { x: 25, y: 50 },
-  'change-01': { x: 75, y: 50 },
-  'skeptic-01': { x: 50, y: 68 },
-  'verifier-01': { x: 50, y: 84 },
-  'executor-01': { x: 50, y: 98 },
+  'commander-01': { x: 50, y: 15 },
+  'security-02': { x: 26, y: 38 },
+  'network-01': { x: 74, y: 38 },
+  'telemetry-03': { x: 26, y: 63 },
+  'change-01': { x: 74, y: 63 },
+  'skeptic-01': { x: 50, y: 52 },
+  'verifier-01': { x: 38, y: 83 },
+  'executor-01': { x: 62, y: 83 },
 };
 
 export function AgentArena({ incidentId, compact = false }) {
@@ -52,23 +52,34 @@ export function AgentArena({ incidentId, compact = false }) {
   });
 
   return (
-    <div className="relative" ref={arenaRef}>
-      {/* Challenge line SVG overlay */}
+    <div className="relative w-full" ref={arenaRef}>
       {challengeLine && (
         <ChallengeLine from={POSITIONS[challengeLine.from]} to={POSITIONS[challengeLine.to]} />
       )}
 
-      <div className={cn('relative grid', compact ? 'gap-1' : 'gap-2')} style={{ minHeight: compact ? 320 : 480 }}>
-        {/* Connection lines background */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+      <div
+        className={cn(
+          'relative w-full overflow-hidden rounded-xl border border-border/60 bg-slate-950/40',
+          compact ? 'h-[320px]' : 'h-[440px] md:h-[500px]'
+        )}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.08),_transparent_55%)]" />
+
+        <svg className="absolute inset-0 h-full w-full pointer-events-none" style={{ zIndex: 0 }}>
           {activeAgents.map(a => {
             const pos = POSITIONS[a.id];
             if (!pos || a.status === 'QUARANTINED' || a.status === 'IDLE') return null;
             return (
               <line
                 key={a.id}
-                x1="50%" y1="8%" x2={`${pos.x}%`} y2={`${pos.y}%`}
-                stroke={a.color} strokeWidth="1" opacity="0.15" strokeDasharray="4 4"
+                x1="50%"
+                y1="15%"
+                x2={`${pos.x}%`}
+                y2={`${pos.y}%`}
+                stroke={a.color}
+                strokeWidth="1.25"
+                opacity="0.14"
+                strokeDasharray="4 6"
               />
             );
           })}
@@ -77,60 +88,60 @@ export function AgentArena({ incidentId, compact = false }) {
         {activeAgents.map(agent => {
           const pos = POSITIONS[agent.id];
           if (!pos) return null;
+
           const msg = latestMessages[agent.id];
           const isChallenging = agent.status === 'CHALLENGING';
           const isChallenged = agent.status === 'CHALLENGED';
+
           return (
             <div
               key={agent.id}
-              className="absolute flex flex-col items-center transition-all duration-500 cursor-pointer group"
-              style={{
-                left: `${pos.x}%`,
-                top: `${pos.y}%`,
-                transform: 'translate(-50%, -50%)',
-                zIndex: 10,
-              }}
+              className="absolute z-10 w-[140px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+              style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               onClick={() => setSelected(agent)}
             >
-              {/* Speech bubble */}
               {msg && !compact && (
                 <SpeechBubble event={msg} agent={agent} isChallenging={isChallenging} />
               )}
 
-              {/* Mascot */}
-              <div className={cn(
-                'relative rounded-full p-1.5 transition-all',
-                agent.status === 'QUARANTINED' ? 'bg-red-500/10 border border-red-500/40' :
-                agent.status === 'INVESTIGATING' || agent.status === 'CHALLENGING' ? 'bg-primary/5 border border-primary/20' :
-                'bg-muted/20 border border-border',
-                isChallenged && 'ring-2 ring-amber-500/50 ring-offset-2 ring-offset-background'
-              )}>
-                <AgentMascot agent={agent} size={compact ? 44 : 64} />
-                {agent.status === 'INVESTIGATING' && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-cyan-400 border-2 border-background animate-aegis-pulse" />
-                )}
-              </div>
-
-              {/* Label */}
-              <div className="mt-1.5 text-center">
-                <div className={cn('text-[11px] font-medium', agent.status === 'QUARANTINED' ? 'text-red-400' : 'text-foreground')}>
-                  {agent.name}
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    'relative rounded-full border transition-all duration-300',
+                    agent.status === 'QUARANTINED' ? 'border-red-500/50 bg-red-500/10' :
+                    agent.status === 'INVESTIGATING' || agent.status === 'CHALLENGING' ? 'border-cyan-400/50 bg-cyan-500/5' :
+                    'border-border/70 bg-slate-900/80',
+                    isChallenged && 'ring-2 ring-amber-500/50 ring-offset-2 ring-offset-slate-950'
+                  )}
+                  style={{ padding: compact ? 6 : 8 }}
+                >
+                  <AgentMascot agent={agent} size={compact ? 52 : 72} />
+                  {agent.status === 'INVESTIGATING' && (
+                    <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-slate-950 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
+                  )}
                 </div>
-                {!compact && (
-                  <div className="flex items-center gap-1 mt-0.5 justify-center">
-                    <TrustScore score={agent.trust_score} size="sm" />
+
+                <div className="mt-2 text-center">
+                  <div className={cn('text-[11px] font-medium leading-tight', agent.status === 'QUARANTINED' ? 'text-red-400' : 'text-slate-100')}>
+                    {agent.name}
                   </div>
-                )}
-                {!compact && agent.status !== 'IDLE' && (
-                  <StatusBadge status={agent.status} className="mt-1" />
-                )}
+                  {!compact && (
+                    <div className="mt-1 flex justify-center">
+                      <TrustScore score={agent.trust_score} size="sm" />
+                    </div>
+                  )}
+                  {!compact && agent.status !== 'IDLE' && (
+                    <div className="mt-2 flex justify-center">
+                      <StatusBadge status={agent.status} className="px-2 py-0.5 text-[9px]" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Detail popover */}
       {selected && (
         <AgentDetailPopover agent={selected} events={events} onClose={() => setSelected(null)} />
       )}
@@ -141,29 +152,91 @@ export function AgentArena({ incidentId, compact = false }) {
 function SpeechBubble({ event, agent, isChallenging }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 50);
+    const t = setTimeout(() => setVisible(true), 80);
     return () => clearTimeout(t);
   }, []);
+
   const text = event.data.short || event.data.full;
+  const color = agent.color || '#22d3ee';
+  const confidence = event.data.confidence;
+  const time = new Date(event.ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
   return (
     <div
       className={cn(
-        'absolute bottom-full mb-2 left-1/2 -translate-x-1/2 max-w-[200px] transition-all duration-300',
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+        'absolute bottom-full mb-2 left-1/2 -translate-x-1/2 max-w-[240px] min-w-[160px] transition-all duration-500 ease-out',
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
       )}
       style={{ zIndex: 20 }}
     >
-      <div className={cn(
-        'px-3 py-2 rounded-lg text-[11px] leading-snug border backdrop-blur-md',
-        isChallenging ? 'bg-pink-500/10 border-pink-500/30 text-pink-200' : 'bg-card/90 border-border text-foreground'
-      )}>
-        {isChallenging && <div className="text-[9px] aegis-mono text-pink-400 mb-0.5">CHALLENGED</div>}
-        {text}
+      <div
+        className={cn(
+          'relative overflow-hidden',
+          isChallenging
+            ? 'border border-pink-500/25 bg-pink-500/[0.06]'
+            : 'border border-border/70 bg-[#10131c]/85'
+        )}
+        style={{
+          boxShadow: `0 2px 16px -4px ${color}25, 0 0 0 1px ${color}08, inset 0 1px 0 ${color}12`,
+          backdropFilter: 'blur(12px)',
+          borderRadius: '2px',
+        }}
+      >
+        <div className="h-[2px] w-full relative overflow-hidden">
+          <div style={{ background: `linear-gradient(90deg, transparent, ${color}80, transparent)` }} className="h-full w-full" />
+          <div className="absolute inset-0" style={{ background: `linear-gradient(90deg, transparent, ${color}30, transparent)`, animation: 'aegis-bubble-scan 3s ease-in-out infinite' }} />
+        </div>
+        <div className="absolute left-0 top-[2px] bottom-0 w-[3px] animate-aegis-bubble-bar" style={{ background: color, boxShadow: `0 0 8px ${color}80, 0 0 16px ${color}40` }} />
+        <div className="px-3 pt-2.5 pb-2 pl-[14px]">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] aegis-mono uppercase tracking-[0.14em] font-bold" style={{ color }}>
+              {agent.name}
+            </span>
+            <span className="text-[8px] aegis-mono text-muted-foreground/70">{time}</span>
+          </div>
+          <div className="text-[11px] leading-snug text-foreground/85">{text}</div>
+          {confidence != null && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 h-[3px] rounded-full bg-border overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${confidence * 100}%`, background: color, boxShadow: `0 0 6px ${color}60` }}
+                />
+              </div>
+              <span className="text-[8px] aegis-mono font-bold" style={{ color }}>{Math.round(confidence * 100)}%</span>
+            </div>
+          )}
+          {event.data.tool && (
+            <div className="mt-1.5 text-[8px] aegis-mono text-muted-foreground/60">
+              ↳ {event.data.tool}
+            </div>
+          )}
+        </div>
+        {isChallenging && (
+          <div className="px-3 pb-2 pl-[14px]">
+            <span className="inline-block text-[8px] aegis-mono font-bold uppercase tracking-[0.15em] text-pink-400 bg-pink-500/10 border border-pink-500/20 px-1.5 py-0.5 rounded-[1px]">
+              ⚑ CHALLENGED
+            </span>
+          </div>
+        )}
       </div>
-      <div className={cn(
-        'w-2 h-2 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2',
-        isChallenging ? 'bg-pink-500/10 border-r border-b border-pink-500/30' : 'bg-card/90 border-r border-b border-border'
-      )} />
+      <div className="flex justify-center">
+        <div
+          className="w-0 h-0 relative"
+          style={{
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: `6px solid ${isChallenging ? 'rgba(244,114,182,0.18)' : 'rgba(16,19,28,0.9)'}`,
+            filter: `drop-shadow(0 -2px 3px ${color}25)`,
+          }}
+        />
+      </div>
+      <div
+        className="flex justify-center"
+        style={{ marginTop: '-5px' }}
+      >
+        <div className="w-[2px] h-[3px] rounded-full" style={{ background: color, opacity: 0.6 }} />
+      </div>
     </div>
   );
 }

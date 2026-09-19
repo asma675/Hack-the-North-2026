@@ -137,6 +137,18 @@
 }
 .animate-aegis-spin-slow { animation: aegis-spin-slow 8s linear infinite; }
 
+@keyframes aegis-bubble-bar {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+.animate-aegis-bubble-bar { animation: aegis-bubble-bar 2.5s ease-in-out infinite; }
+
+@keyframes aegis-bubble-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-aegis-bubble-scan { animation: aegis-bubble-scan 3s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-aegis-pulse,
   .animate-aegis-pulse-ring,
