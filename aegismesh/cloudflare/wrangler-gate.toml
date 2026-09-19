@@ -1,0 +1,9 @@
+name = "aegismesh-gate"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+node_compat = true
+
+[[kv_namespaces]]
+binding = "GATE_KV"
+id = "aegis-gate-kv"
+preview_id = "aegis-gate-kv-preview"

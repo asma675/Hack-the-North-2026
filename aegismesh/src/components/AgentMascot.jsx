@@ -14,7 +14,7 @@ const ROLE_SYMBOLS = {
 export function AgentMascot({ agent, size = 64, animate = true, className }) {
   const color = agent.color || '#22d3ee';
   const quarantined = agent.status === 'QUARANTINED';
-  const fill = quarantined ? '#f87171' : color;
+  const fill = quarantined ? '#64748b' : color;
   const symbol = ROLE_SYMBOLS[agent.id] || '◉';
 
   return (
@@ -26,9 +26,9 @@ export function AgentMascot({ agent, size = 64, animate = true, className }) {
       style={{
         width: size,
         height: size,
-        background: quarantined ? 'rgba(239, 68, 68, 0.12)' : 'rgba(15, 23, 42, 0.9)',
-        borderColor: quarantined ? 'rgba(248, 113, 113, 0.75)' : `${fill}88`,
-        boxShadow: quarantined ? '0 0 12px rgba(239, 68, 68, 0.45)' : `0 0 18px ${fill}44`,
+        background: quarantined ? 'rgba(15, 23, 42, 0.5)' : 'rgba(15, 23, 42, 0.9)',
+        borderColor: quarantined ? 'rgba(100, 116, 139, 0.3)' : `${fill}88`,
+        boxShadow: `0 0 18px ${fill}44`,
       }}
     >
       <div
@@ -45,10 +45,8 @@ export function AgentMascot({ agent, size = 64, animate = true, className }) {
       </div>
 
       {quarantined && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="rounded-full border border-red-500/60 bg-red-500/15 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.18em] text-red-300">
-            Q
-          </div>
+        <div className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 rounded-full border border-slate-950 bg-slate-700">
+          <span className="text-[6px] font-black text-slate-400 leading-none">⊘</span>
         </div>
       )}
     </div>

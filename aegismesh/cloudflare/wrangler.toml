@@ -1,0 +1,35 @@
+name = "aegismesh"
+main = "worker-entry.mjs"
+rule = "ESModule"
+compatibility_date = "2026-09-01"
+node_compat = true
+usage_model = "bundled"
+
+[[kv_namespaces]]
+binding = "AEGIS_KV"
+id = "aegis-mesh-kv"
+preview_id = "aegis-mesh-kv-preview"
+
+[[durable_objects.bindings]]
+name = "AEGIS_AGENT_DO"
+class_name = "AgentDurableObject"
+
+[[durable_objects.bindings]]
+name = "AEGIS_GATE_DO"
+class_name = "GateDurableObject"
+
+[[queues]]
+binding = "AEGIS_QUEUE"
+queue_name = "aegis-queue"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["AgentDurableObject", "GateDurableObject"]
+
+[rules]
+type = "Service"
+pattern = "aegismesh.dev/*"
+zone_id = "aegismesh-zone"
+
+[ai]
+providers = ["openai"]

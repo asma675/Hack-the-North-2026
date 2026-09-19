@@ -4,23 +4,50 @@ import { AgentMascot } from '@/components/AgentMascot';
 import { StatusBadge, TrustScore } from '@/components/aegis';
 import { useAegis } from '@/lib/useAegis';
 
-// Arena layout:
-//           Commander
-//      Security   Network
-//      Telemetry  Change
-//           Skeptic
-//          Verifier
-//          Executor
-
+// Arena layout — spacious hex-grid spread to prevent bubble overlap
 const POSITIONS = {
-  'commander-01': { x: 50, y: 15 },
-  'security-02': { x: 26, y: 38 },
-  'network-01': { x: 74, y: 38 },
-  'telemetry-03': { x: 26, y: 63 },
-  'change-01': { x: 74, y: 63 },
-  'skeptic-01': { x: 50, y: 52 },
-  'verifier-01': { x: 38, y: 83 },
-  'executor-01': { x: 62, y: 83 },
+  'commander-01': { x: 50, y: 7 },
+  'security-02':  { x: 16, y: 26 },
+  'network-01':   { x: 84, y: 26 },
+  'skeptic-01':   { x: 50, y: 42 },
+  'telemetry-03': { x: 12, y: 58 },
+  'change-01':    { x: 88, y: 58 },
+  'verifier-01':  { x: 28, y: 80 },
+  'executor-01':  { x: 72, y: 80 },
+};
+
+// Personality traits per agent for unique visual identity
+const PERSONALITIES = {
+  'commander-01': { aura: 'rgba(34,211,238,0.12)', ringStyle: 'double' },
+  'security-02':  { aura: 'rgba(167,139,250,0.12)', ringStyle: 'dashed' },
+  'network-01':   { aura: 'rgba(52,211,153,0.12)', ringStyle: 'solid' },
+  'telemetry-03': { aura: 'rgba(251,191,36,0.10)', ringStyle: 'dotted' },
+  'change-01':    { aura: 'rgba(244,114,182,0.10)', ringStyle: 'dashed' },
+  'skeptic-01':   { aura: 'rgba(251,146,60,0.10)', ringStyle: 'solid' },
+  'verifier-01':  { aura: 'rgba(34,211,238,0.10)', ringStyle: 'double' },
+  'executor-01':  { aura: 'rgba(248,113,113,0.10)', ringStyle: 'dashed' },
+};
+
+const ROLE_LABELS = {
+  'commander-01': '⚔ LEAD',
+  'security-02':  '🛡 GUARD',
+  'network-01':   '🌐 RELAY',
+  'telemetry-03': '📡 SCAN',
+  'change-01':    '⚙ SHIFT',
+  'skeptic-01':   '🔍 DOUBT',
+  'verifier-01':  '✓ PROOF',
+  'executor-01':  '⚡ ACT',
+};
+
+const ROLE_COLORS = {
+  'commander-01': '#22d3ee',
+  'security-02': '#a78bfa',
+  'network-01': '#34d399',
+  'telemetry-03': '#fbbf24',
+  'change-01': '#f472b6',
+  'skeptic-01': '#fb923c',
+  'verifier-01': '#22d3ee',
+  'executor-01': '#f87171',
 };
 
 export function AgentArena({ incidentId, compact = false }) {
@@ -60,10 +87,11 @@ export function AgentArena({ incidentId, compact = false }) {
       <div
         className={cn(
           'relative w-full overflow-hidden rounded-xl border border-border/60 bg-slate-950/40',
-          compact ? 'h-[320px]' : 'h-[440px] md:h-[500px]'
+          compact ? 'h-[400px]' : 'h-[560px] md:h-[600px]'
         )}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.08),_transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.06),_transparent_50%)]" />
+        <div className="absolute inset-0 aegis-grid opacity-30" />
 
         <svg className="absolute inset-0 h-full w-full pointer-events-none" style={{ zIndex: 0 }}>
           {activeAgents.map(a => {
@@ -73,13 +101,13 @@ export function AgentArena({ incidentId, compact = false }) {
               <line
                 key={a.id}
                 x1="50%"
-                y1="15%"
+                y1="7%"
                 x2={`${pos.x}%`}
                 y2={`${pos.y}%`}
                 stroke={a.color}
-                strokeWidth="1.25"
-                opacity="0.14"
-                strokeDasharray="4 6"
+                strokeWidth="1"
+                opacity="0.12"
+                strokeDasharray="3 6"
               />
             );
           })}
@@ -92,38 +120,59 @@ export function AgentArena({ incidentId, compact = false }) {
           const msg = latestMessages[agent.id];
           const isChallenging = agent.status === 'CHALLENGING';
           const isChallenged = agent.status === 'CHALLENGED';
+          const personality = PERSONALITIES[agent.id] || { aura: 'transparent', ringStyle: 'solid' };
+          const sideOffset = pos.x < 40 ? -24 : pos.x > 60 ? 24 : 0;
 
           return (
             <div
               key={agent.id}
-              className="absolute z-10 w-[140px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+              className="absolute z-10 w-[130px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-[1.04]"
               style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               onClick={() => setSelected(agent)}
             >
               {msg && !compact && (
-                <SpeechBubble event={msg} agent={agent} isChallenging={isChallenging} />
+                <SpeechBubble event={msg} agent={agent} isChallenging={isChallenging} sideOffset={sideOffset} />
               )}
 
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
                     'relative rounded-full border transition-all duration-300',
-                    agent.status === 'QUARANTINED' ? 'border-red-500/50 bg-red-500/10' :
-                    agent.status === 'INVESTIGATING' || agent.status === 'CHALLENGING' ? 'border-cyan-400/50 bg-cyan-500/5' :
-                    'border-border/70 bg-slate-900/80',
+                    agent.status === 'QUARANTINED' ? 'border-slate-700/30 bg-slate-900/30' :
+                    agent.status === 'INVESTIGATING' || agent.status === 'CHALLENGING' ? 'border-cyan-400/40 bg-cyan-500/5' :
+                    'border-border/60 bg-slate-900/70',
                     isChallenged && 'ring-2 ring-amber-500/50 ring-offset-2 ring-offset-slate-950'
                   )}
-                  style={{ padding: compact ? 6 : 8 }}
+                  style={{
+                    padding: compact ? 5 : 7,
+                    background: `radial-gradient(circle, ${personality.aura} 0%, transparent 70%)`,
+                  }}
                 >
-                  <AgentMascot agent={agent} size={compact ? 52 : 72} />
+                  <AgentMascot agent={agent} size={compact ? 48 : 64} />
                   {agent.status === 'INVESTIGATING' && (
-                    <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-slate-950 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
+                    <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-slate-950 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
+                  )}
+                  {!compact && (
+                    <div
+                      className="absolute -inset-1 rounded-full pointer-events-none"
+                      style={{
+                        border: `1px ${personality.ringStyle} ${agent.color}25`,
+                        animation: 'aegis-pulse 3s ease-in-out infinite',
+                      }}
+                    />
                   )}
                 </div>
 
-                <div className="mt-2 text-center">
-                  <div className={cn('text-[11px] font-medium leading-tight', agent.status === 'QUARANTINED' ? 'text-red-400' : 'text-slate-100')}>
-                    {agent.name}
+                <div className="mt-1.5 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <span className={cn('text-[10px] font-medium leading-tight', agent.status === 'QUARANTINED' ? 'text-slate-500' : 'text-slate-100')}>
+                      {agent.name}
+                    </span>
+                    {!compact && ROLE_LABELS[agent.id] && (
+                      <span className="text-[7px] aegis-mono font-bold tracking-wider px-1 py-0.5 rounded-[1px]" style={{ color: ROLE_COLORS[agent.id], background: `${ROLE_COLORS[agent.id]}15`, border: `1px solid ${ROLE_COLORS[agent.id]}30` }}>
+                        {ROLE_LABELS[agent.id]}
+                      </span>
+                    )}
                   </div>
                   {!compact && (
                     <div className="mt-1 flex justify-center">
@@ -131,8 +180,8 @@ export function AgentArena({ incidentId, compact = false }) {
                     </div>
                   )}
                   {!compact && agent.status !== 'IDLE' && (
-                    <div className="mt-2 flex justify-center">
-                      <StatusBadge status={agent.status} className="px-2 py-0.5 text-[9px]" />
+                    <div className="mt-1.5 flex justify-center">
+                      <StatusBadge status={agent.status} className="px-1.5 py-0.5 text-[8px]" />
                     </div>
                   )}
                 </div>
@@ -149,7 +198,7 @@ export function AgentArena({ incidentId, compact = false }) {
   );
 }
 
-function SpeechBubble({ event, agent, isChallenging }) {
+function SpeechBubble({ event, agent, isChallenging, sideOffset = 0 }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80);
@@ -164,10 +213,10 @@ function SpeechBubble({ event, agent, isChallenging }) {
   return (
     <div
       className={cn(
-        'absolute bottom-full mb-2 left-1/2 -translate-x-1/2 max-w-[240px] min-w-[160px] transition-all duration-500 ease-out',
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+        'absolute bottom-full mb-1 left-1/2 -translate-x-1/2 max-w-[180px] min-w-[120px] transition-all duration-500 ease-out',
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       )}
-      style={{ zIndex: 20 }}
+      style={{ zIndex: 20, marginLeft: `${sideOffset}px` }}
     >
       <div
         className={cn(
@@ -177,7 +226,7 @@ function SpeechBubble({ event, agent, isChallenging }) {
             : 'border border-border/70 bg-[#10131c]/85'
         )}
         style={{
-          boxShadow: `0 2px 16px -4px ${color}25, 0 0 0 1px ${color}08, inset 0 1px 0 ${color}12`,
+          boxShadow: `0 2px 12px -4px ${color}25, 0 0 0 1px ${color}08, inset 0 1px 0 ${color}12`,
           backdropFilter: 'blur(12px)',
           borderRadius: '2px',
         }}
@@ -186,35 +235,35 @@ function SpeechBubble({ event, agent, isChallenging }) {
           <div style={{ background: `linear-gradient(90deg, transparent, ${color}80, transparent)` }} className="h-full w-full" />
           <div className="absolute inset-0" style={{ background: `linear-gradient(90deg, transparent, ${color}30, transparent)`, animation: 'aegis-bubble-scan 3s ease-in-out infinite' }} />
         </div>
-        <div className="absolute left-0 top-[2px] bottom-0 w-[3px] animate-aegis-bubble-bar" style={{ background: color, boxShadow: `0 0 8px ${color}80, 0 0 16px ${color}40` }} />
-        <div className="px-3 pt-2.5 pb-2 pl-[14px]">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[9px] aegis-mono uppercase tracking-[0.14em] font-bold" style={{ color }}>
+        <div className="absolute left-0 top-[2px] bottom-0 w-[3px] animate-aegis-bubble-bar" style={{ background: color, boxShadow: `0 0 6px ${color}80, 0 0 12px ${color}40` }} />
+        <div className="px-2.5 pt-2 pb-1.5 pl-[12px]">
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="text-[8px] aegis-mono uppercase tracking-[0.14em] font-bold" style={{ color }}>
               {agent.name}
             </span>
-            <span className="text-[8px] aegis-mono text-muted-foreground/70">{time}</span>
+            <span className="text-[7px] aegis-mono text-muted-foreground/70">{time}</span>
           </div>
-          <div className="text-[11px] leading-snug text-foreground/85">{text}</div>
+          <div className="text-[10px] leading-snug text-foreground/85">{text}</div>
           {confidence != null && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 h-[3px] rounded-full bg-border overflow-hidden">
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="flex-1 h-[2px] rounded-full bg-border overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${confidence * 100}%`, background: color, boxShadow: `0 0 6px ${color}60` }}
+                  style={{ width: `${confidence * 100}%`, background: color, boxShadow: `0 0 4px ${color}60` }}
                 />
               </div>
-              <span className="text-[8px] aegis-mono font-bold" style={{ color }}>{Math.round(confidence * 100)}%</span>
+              <span className="text-[7px] aegis-mono font-bold" style={{ color }}>{Math.round(confidence * 100)}%</span>
             </div>
           )}
           {event.data.tool && (
-            <div className="mt-1.5 text-[8px] aegis-mono text-muted-foreground/60">
+            <div className="mt-1 text-[7px] aegis-mono text-muted-foreground/60">
               ↳ {event.data.tool}
             </div>
           )}
         </div>
         {isChallenging && (
-          <div className="px-3 pb-2 pl-[14px]">
-            <span className="inline-block text-[8px] aegis-mono font-bold uppercase tracking-[0.15em] text-pink-400 bg-pink-500/10 border border-pink-500/20 px-1.5 py-0.5 rounded-[1px]">
+          <div className="px-2.5 pb-1.5 pl-[12px]">
+            <span className="inline-block text-[7px] aegis-mono font-bold uppercase tracking-[0.15em] text-pink-400 bg-pink-500/10 border border-pink-500/20 px-1.5 py-0.5 rounded-[1px]">
               ⚑ CHALLENGED
             </span>
           </div>
@@ -222,20 +271,17 @@ function SpeechBubble({ event, agent, isChallenging }) {
       </div>
       <div className="flex justify-center">
         <div
-          className="w-0 h-0 relative"
+          className="w-0 h-0"
           style={{
-            borderLeft: '6px solid transparent',
-            borderRight: '6px solid transparent',
-            borderTop: `6px solid ${isChallenging ? 'rgba(244,114,182,0.18)' : 'rgba(16,19,28,0.9)'}`,
-            filter: `drop-shadow(0 -2px 3px ${color}25)`,
+            borderLeft: '5px solid transparent',
+            borderRight: '5px solid transparent',
+            borderTop: `5px solid ${isChallenging ? 'rgba(244,114,182,0.18)' : 'rgba(16,19,28,0.9)'}`,
+            filter: `drop-shadow(0 -1px 2px ${color}25)`,
           }}
         />
       </div>
-      <div
-        className="flex justify-center"
-        style={{ marginTop: '-5px' }}
-      >
-        <div className="w-[2px] h-[3px] rounded-full" style={{ background: color, opacity: 0.6 }} />
+      <div className="flex justify-center" style={{ marginTop: '-4px' }}>
+        <div className="w-[2px] h-[2px] rounded-full" style={{ background: color, opacity: 0.6 }} />
       </div>
     </div>
   );

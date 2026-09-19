@@ -1,0 +1,23 @@
+{
+  "name": "aegismesh-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "deploy:dev": "wrangler deploy --env development",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail",
+    "kv:seed": "wrangler kv key put AEGIS_KV",
+    "kv:list": "wrangler kv key list",
+    "queues:create": "wrangler queues create aegis-queue",
+    "agent:test": "node --input-type=module -e \"import { AegisOrchestrator } from './agent-orchestrator.mjs'; console.log('Agent module loaded')\"",
+    "check": "wrangler deploy --dry-run"
+  },
+  "dependencies": {
+    "@cloudflare/agents": "^0.0.8"
+  },
+  "devDependencies": {
+    "wrangler": "^3.75.0"
+  }
+}

@@ -12,9 +12,9 @@ Keep the separation explicit:
 
 - `src/` — React/Vite presentation and control-plane UI.
 - `src/api/base44Client.js` — compatibility facade only. The name is retained so original generated screens do not need a risky rewrite; it now calls our own `/api/*` routes.
-- `server/` — standalone Node backend and provider adapters.
+- `server/` — Node backend (local dev fallback; uses server/store.mjs which auto-detects CF Workers env via setCFEnv).
 - `api/` — Vercel serverless entrypoint.
-- `cloudflare/` — optional Aegis Gate Worker.
+- `cloudflare/` — Cloudflare Workers runtime (primary for hackathon deployment). Includes main Worker (worker-entry.mjs), Aegis Gate (worker.js), Autonomous Agent (agent-orchestrator.mjs, agent-tools.mjs), Durable Objects (do-agents.mjs), KV persistence (kv-store.mjs), Queue handlers (queue-handlers.mjs). The orchestrator agent autonomously decomposes goals, dispatches tasks to the agent fleet, monitors progress, and synthesizes findings.
 - `edge/` — Raspberry Pi enforcement service.
 
 ## Product responsibilities

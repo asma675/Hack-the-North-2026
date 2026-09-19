@@ -13,7 +13,14 @@
     "lint": "eslint . --quiet",
     "smoke": "node scripts/smoke.mjs",
     "check:server": "node --check server/app.mjs && node --check server/index.mjs && node --check server/integrations.mjs && node --check api/[...path].js",
-    "smoke:live-contracts": "node scripts/live-contract-smoke.mjs"
+    "smoke:live-contracts": "node scripts/live-contract-smoke.mjs",
+    "cf:deploy": "cd cloudflare && npx wrangler deploy",
+    "cf:dev": "cd cloudflare && npx wrangler dev",
+    "cf:tail": "cd cloudflare && npx wrangler tail",
+    "cf:kv:put": "cd cloudflare && npx wrangler kv key put AEGIS_KV",
+    "cf:kv:list": "cd cloudflare && npx wrangler kv key list",
+    "cf:queue:create": "cd cloudflare && npx wrangler queues create aegis-queue",
+    "cf:check": "cd cloudflare && npx wrangler deploy --dry-run"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^17.0.0",
