@@ -5,7 +5,7 @@ let memory = null;
 let useRedis = false;
 let redisUrl = '';
 let redisToken = '';
-let redisKey = 'aegismesh:state';
+let redisKey = 'vanguard:state';
 let kv = null;
 let fsModule = null;
 let pathModule = null;
@@ -57,7 +57,7 @@ export async function loadState() {
   }
   try {
     await ensureFs();
-    const filePath = pathModule.resolve(process.cwd(), 'data', 'aegismesh.json');
+    const filePath = pathModule.resolve(process.cwd(), 'data', 'vanguard.json');
     memory = JSON.parse(await fsModule.readFile(filePath, 'utf8'));
   } catch {
     memory = freshState();
@@ -78,7 +78,7 @@ export async function persistState(state) {
   }
   try {
     await ensureFs();
-    const filePath = pathModule.resolve(process.cwd(), 'data', 'aegismesh.json');
+    const filePath = pathModule.resolve(process.cwd(), 'data', 'vanguard.json');
     await fsModule.mkdir(pathModule.dirname(filePath), { recursive: true });
     await fsModule.writeFile(filePath, JSON.stringify(state, null, 2));
   } catch { /* in-memory state still serves this warm instance */ }

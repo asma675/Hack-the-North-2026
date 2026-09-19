@@ -4,6 +4,6 @@ dist
 .env
 .env.*
 !.env.example
-data/aegismesh.json
+data/vanguard.json
 *.zip
 npm-debug.log*

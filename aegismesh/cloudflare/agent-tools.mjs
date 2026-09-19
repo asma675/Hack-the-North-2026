@@ -1,4 +1,4 @@
-// Tool definitions for the AegisMesh autonomous orchestrator agent.
+// Tool definitions for the Vanguard autonomous orchestrator agent.
 // Each tool has a schema compatible with @cloudflare/agents tool-calling protocol.
 
 import { loadSkills, searchSkills, matchSkills } from './skill-registry.mjs';
@@ -10,7 +10,7 @@ export const TOOL_SCHEMAS = [
   { name: 'query_agent', description: 'Get detailed status, capabilities, trust score, and recent activity of a specific agent. Pass the agent_key (e.g. "security-02").', parameters: { type: 'object', properties: { agent_key: { type: 'string', description: 'The agent identifier, e.g. security-02' } }, required: ['agent_key'] } },
   { name: 'dispatch_task', description: 'Assign a task to a specific agent by agent_key. Returns a task_id for monitoring.', parameters: { type: 'object', properties: { agent_key: { type: 'string' }, task: { type: 'string' }, priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] } }, required: ['agent_key', 'task'] } },
   { name: 'get_task_status', description: 'Check the status and result of a dispatched task.', parameters: { type: 'object', properties: { task_id: { type: 'string' } }, required: ['task_id'] } },
-  { name: 'get_system_health', description: 'Check health status of all AegisMesh services.', parameters: { type: 'object', properties: {}, required: [] } },
+  { name: 'get_system_health', description: 'Check health status of all Vanguard services.', parameters: { type: 'object', properties: {}, required: [] } },
   { name: 'get_incident', description: 'Get incident details.', parameters: { type: 'object', properties: { incident_id: { type: 'string' } }, required: ['incident_id'] } },
   { name: 'synthesize_findings', description: 'Combine findings from multiple agents into a comprehensive analysis.', parameters: { type: 'object', properties: { agent_ids: { type: 'array', items: { type: 'string' } }, question: { type: 'string' } }, required: ['agent_ids', 'question'] } },
   { name: 'run_scenario', description: 'Execute a predefined BREACH or FALSE_ALARM scenario.', parameters: { type: 'object', properties: { scenario: { type: 'string', enum: ['BREACH', 'FALSE_ALARM'] } }, required: ['scenario'] } },

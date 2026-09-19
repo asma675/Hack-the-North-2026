@@ -1,4 +1,4 @@
-// Persistence bridge — streams AegisMesh engine events into the real backend
+// Persistence bridge — streams Vanguard engine events into the real backend
 // (entities + server-side authorization functions), so incidents, evidence,
 // action requests, approvals and audit history survive refreshes.
 // Best-effort: a persistence failure must never break the live demo.

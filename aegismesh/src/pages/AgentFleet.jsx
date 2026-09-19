@@ -27,7 +27,7 @@ export default function AgentFleet() {
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div>
         <h1 className="text-2xl font-display font-bold tracking-tight">Agent Fleet</h1>
-        <p className="text-sm text-muted-foreground mt-1">Registered autonomous agents under AegisMesh governance</p>
+        <p className="text-sm text-muted-foreground mt-1">Registered autonomous agents under Vanguard governance</p>
       </div>
 
       {/* Stats */}

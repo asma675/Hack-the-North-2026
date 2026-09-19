@@ -3,7 +3,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 
-const mockPort=8810, apiPort=8798, dataFile='/tmp/aegismesh-live-contract-smoke.json';
+const mockPort=8810, apiPort=8798, dataFile='/tmp/vanguard-live-contract-smoke.json';
 try{fs.unlinkSync(dataFile);}catch{}
 
 const read=req=>new Promise((resolve,reject)=>{let b='';req.on('data',d=>b+=d);req.on('end',()=>{try{resolve(b?JSON.parse(b):{})}catch(e){reject(e)}});req.on('error',reject)});
@@ -36,7 +36,7 @@ try{
   r=await fetch(`http://127.0.0.1:${apiPort}/api/ai/verify`,{method:'POST',headers:H,body:JSON.stringify({incident:'test',observations:['failed logins','novel outbound']})});const ai=await r.json();assert.equal(ai.mode,'LIVE');assert.equal(ai.recommended,'network.isolate');assert.equal(ai.confidence,.94);
   r=await fetch(`http://127.0.0.1:${apiPort}/api/functions/authorizeAction`,{method:'POST',headers:H,body:JSON.stringify({request_id:'LIVE-BLOCK',incident_id:'INC-LIVE',agent_key:'telemetry-03',action:'power.cut',target:'victim',risk:'CRITICAL',verifier_confidence:.99,human_required:true})});const blocked=await r.json();assert.equal(blocked.status,'BLOCKED');
   r=await fetch(`http://127.0.0.1:${apiPort}/api/functions/authorizeAction`,{method:'POST',headers:H,body:JSON.stringify({request_id:'LIVE-ALLOW',incident_id:'INC-LIVE',agent_key:'executor-01',action:'network.isolate',target:'victim',risk:'HIGH',verifier_confidence:.94,human_required:true})});const allowed=await r.json();assert.equal(allowed.status,'APPROVAL_REQUIRED');
-  console.log('AegisMesh live-provider contract smoke test: PASS');
+  console.log('Vanguard live-provider contract smoke test: PASS');
 } finally {
   api.kill('SIGTERM');
   await new Promise(r=>mock.close(r));

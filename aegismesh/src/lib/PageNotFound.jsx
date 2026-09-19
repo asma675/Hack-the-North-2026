@@ -18,7 +18,7 @@ export default function PageNotFound() {
               <ShieldAlert className="h-5 w-5 text-red-400" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-400">AegisMesh</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-400">Vanguard</p>
               <p className="text-sm text-muted-foreground">Route integrity check failed</p>
             </div>
           </div>
@@ -29,14 +29,14 @@ export default function PageNotFound() {
           <div className="font-mono text-7xl font-black tracking-tighter text-foreground/15">404</div>
           <h1 className="text-3xl font-semibold tracking-tight">This control surface does not exist.</h1>
           <p className="max-w-lg text-sm leading-6 text-muted-foreground">
-            No AegisMesh route is registered for <span className="font-mono text-foreground">{location.pathname}</span>. Your incident state and agent sessions are unchanged.
+            No Vanguard route is registered for <span className="font-mono text-foreground">{location.pathname}</span>. Your incident state and agent sessions are unchanged.
           </p>
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link to={insideApp ? '/app' : '/'} className="inline-flex items-center gap-2 border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-300 transition hover:bg-cyan-400/15 hover:shadow-[0_0_24px_rgba(34,211,238,.12)]">
             <ArrowLeft className="h-4 w-4" />
-            {insideApp ? 'Return to command center' : 'Return to AegisMesh'}
+            {insideApp ? 'Return to command center' : 'Return to Vanguard'}
           </Link>
           {insideApp && (
             <Link to="/app/judge" className="inline-flex items-center border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition hover:border-cyan-400/30">

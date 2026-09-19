@@ -140,7 +140,7 @@ export default function AgentPassport() {
             <Database className="w-3 h-3" />
             {data.error
               ? `LIVE ENGINE ONLY — history unavailable (${data.error})`
-              : 'History served from the AegisMesh incident database'}
+              : 'History served from the Vanguard incident database'}
           </div>
         </>
       )}

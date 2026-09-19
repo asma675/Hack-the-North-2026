@@ -1,4 +1,4 @@
-// AegisMesh Sovereign — QVAC local AI inference engine.
+// Vanguard Sovereign — QVAC local AI inference engine.
 // PRIMARY inference provider. No cloud required.
 // Three-tier system: QVAC → OpenAI → Deterministic fallback.
 // Designed for 150ms test mode (no GPU, fast path).
@@ -259,7 +259,7 @@ export async function infer(prompt, options = {}) {
 // ── Agent-aware inference (auto-selects model by role) ────────────────
 export async function inferForAgent(agentId, agentRole, prompt, options = {}) {
   const model = options.model || ROLE_MODELS[agentRole] || 'qvac-1b';
-  const system = options.system || `You are AegisMesh ${agentRole} agent (${agentId}). Zero-trust, local-first. Report findings concisely with confidence scores.`;
+  const system = options.system || `You are Vanguard ${agentRole} agent (${agentId}). Zero-trust, local-first. Report findings concisely with confidence scores.`;
   return infer(prompt, { ...options, model, system });
 }
 

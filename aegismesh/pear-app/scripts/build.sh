@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# Cross-platform build launcher for AegisMesh Sovereign.
+# Cross-platform build launcher for Vanguard Sovereign.
 # Mimics hello-pear-qvac-tui make script.
 set -euo pipefail
 
 TARGET="${1:-linux-x64}"
 OUT_DIR="out"
 
-echo "=== AegisMesh Sovereign — Build for $TARGET ==="
+echo "=== Vanguard Sovereign — Build for $TARGET ==="
 
 mkdir -p "$OUT_DIR/$TARGET"
 
 # Determine binary name
 case "$TARGET" in
-  linux-x64)    BIN="aegismesh-linux-x64" ;;
-  linux-arm64)  BIN="aegismesh-linux-arm64" ;;
-  darwin-arm64) BIN="aegismesh-darwin-arm64" ;;
-  darwin-x64)   BIN="aegismesh-darwin-x64" ;;
-  win32-x64)    BIN="aegismesh-win32-x64.exe" ;;
+  linux-x64)    BIN="vanguard-linux-x64" ;;
+  linux-arm64)  BIN="vanguard-linux-arm64" ;;
+  darwin-arm64) BIN="vanguard-darwin-arm64" ;;
+  darwin-x64)   BIN="vanguard-darwin-x64" ;;
+  win32-x64)    BIN="vanguard-win32-x64.exe" ;;
   *) echo "Unknown target: $TARGET"; exit 1 ;;
 esac
 
@@ -38,8 +38,8 @@ chmod +x "$OUT_DIR/$TARGET/$BIN"
 
 echo "[4/4] Packaging..."
 cd "$OUT_DIR/$TARGET"
-tar -czf "../aegismesh-$TARGET.tar.gz" .
+tar -czf "../vanguard-$TARGET.tar.gz" .
 cd "$OLDPWD"
 
-echo "=== Build complete: out/aegismesh-$TARGET.tar.gz ==="
-echo "=== To release: pear build --package=./package.json --$TARGET-app ./out/$TARGET/aegismesh --target ../release ==="
+echo "=== Build complete: out/vanguard-$TARGET.tar.gz ==="
+echo "=== To release: pear build --package=./package.json --$TARGET-app ./out/$TARGET/vanguard --target ../release ==="

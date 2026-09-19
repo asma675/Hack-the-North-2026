@@ -2,11 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { freshState } from './seed.mjs';
 
-const filePath=process.env.DATA_FILE||path.resolve(process.cwd(),'data','aegismesh.json');
+const filePath=process.env.DATA_FILE||path.resolve(process.cwd(),'data','vanguard.json');
 let memory=null;
 const redisUrl=process.env.UPSTASH_REDIS_REST_URL;
 const redisToken=process.env.UPSTASH_REDIS_REST_TOKEN;
-const redisKey=process.env.AEGIS_REDIS_KEY||'aegismesh:state';
+const redisKey=process.env.AEGIS_REDIS_KEY||'vanguard:state';
 
 let cfEnv=null;
 export function setCFEnv(env){cfEnv=env;}

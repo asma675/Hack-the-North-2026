@@ -1,5 +1,5 @@
 {
-  "name": "aegismesh-agent-control-plane",
+  "name": "vanguard-agent-control-plane",
   "private": true,
   "version": "1.0.0",
   "type": "module",

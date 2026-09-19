@@ -1,4 +1,4 @@
-// AegisMesh Autonomous Agent — the "brain" of the system.
+// Vanguard Autonomous Agent — the "brain" of the system.
 // Decomposes goals, dispatches tasks, monitors progress, synthesizes findings.
 import { TOOL_SCHEMAS, executeTool } from './agent-tools.mjs';
 
@@ -7,7 +7,7 @@ export class AegisOrchestrator {
     this.env = env;
     this.maxSteps = 10;
     this.model = process.env.AGENT_MODEL || 'gpt-5.6-terra';
-    this.systemPrompt = `You are the AegisMesh Orchestrator — the central intelligence coordinating a fleet of 7 specialized AI agents investigating security incidents.
+    this.systemPrompt = `You are the Vanguard Orchestrator — the central intelligence coordinating a fleet of 7 specialized AI agents investigating security incidents.
 
 AVAILABLE AGENTS:
 - commander-01 (Swarm Commander): Coordinates all agents, assigns roles, makes final decisions

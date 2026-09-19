@@ -1,6 +1,6 @@
-# AegisMesh security notes
+# Vanguard security notes
 
-AegisMesh is a hackathon prototype of a zero-trust agent control plane. It is not a production security appliance.
+Vanguard is a hackathon prototype of a zero-trust agent control plane. It is not a production security appliance.
 
 - Never expose model/provider secrets in `VITE_*` variables or browser code.
 - Change `AUTH_SECRET` and `EDGE_SHARED_SECRET` before any public deployment.

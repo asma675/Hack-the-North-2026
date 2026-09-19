@@ -221,7 +221,7 @@ function FinalScreen({ metrics, onReset }) {
         </div>
 
         <div className="pt-8 border-t border-border">
-          <h2 className="text-3xl font-display font-bold tracking-tight aegis-text-cyan">AegisMesh</h2>
+          <h2 className="text-3xl font-display font-bold tracking-tight aegis-text-cyan">Vanguard</h2>
           <p className="text-sm text-muted-foreground mt-2 aegis-mono tracking-wider">INVESTIGATE · CHALLENGE · CONTROL</p>
         </div>
 

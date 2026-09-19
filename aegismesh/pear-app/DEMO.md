@@ -1,6 +1,6 @@
 # Tether Hackathon — "Ship an unstoppable local AI App" demo
 
-AegisMesh Sovereign: a zero-trust multi-agent security platform running **entirely on local AI (QVAC) and P2P (Pear)** — no cloud required.
+Vanguard Sovereign: a zero-trust multi-agent security platform running **entirely on local AI (QVAC) and P2P (Pear)** — no cloud required.
 
 ## What's New in This Build
 
@@ -14,7 +14,7 @@ AegisMesh Sovereign: a zero-trust multi-agent security platform running **entire
 ## Setup (30 seconds)
 
 ```bash
-cd aegismesh/pear-app
+cd vanguard/pear-app
 npm install
 node workers/boot.mjs
 # → http://localhost:8000
@@ -22,13 +22,13 @@ node workers/boot.mjs
 
 For 150ms demo mode (no GPU, fast path):
 ```bash
-cd aegismesh/pear-app
+cd vanguard/pear-app
 QVAC_TEST_MODE=1 node workers/boot.mjs
 ```
 
 Or run directly via Pear:
 ```bash
-pear run pear://<aegismesh-key>
+pear run pear://<vanguard-key>
 ```
 
 ## Demo Flow (~30 minutes max)
@@ -81,13 +81,13 @@ pear run pear://<aegismesh-key>
 ### 6. Pear P2P Distribution (~5 min)
 ```bash
 # Show Pear runtime info
-pear info aegismesh-sovereign
+pear info vanguard-sovereign
 
 # Get install key
 pear seed pear://<key>
 
 # On another machine — install without internet
-pear install ./aegismesh-sovereign-1.0.0.tar.gz
+pear install ./vanguard-sovereign-1.0.0.tar.gz
 ```
 - Dashboard shows: Peer ID, connected peers, network capabilities
 - In production, Hyperswarm auto-discovers peers
@@ -121,7 +121,7 @@ npm run make:darwin-arm64
 npm run make:win32-x64
 ```
 - Show built artifacts in `out/`
-- On macOS: `codesign --force --deep --sign - aegismesh-darwin-arm64`
+- On macOS: `codesign --force --deep --sign - vanguard-darwin-arm64`
 - **Key point:** Same code, every platform, signed binaries
 
 ### 10. Closing (~3 min)
@@ -167,7 +167,7 @@ Dashboard (real-time metrics, badges, audit)
 
 ## Key Differentiators vs Cloud AI
 
-| Feature | AegisMesh Sovereign | Cloud AI |
+| Feature | Vanguard Sovereign | Cloud AI |
 |---------|-------------------|----------|
 | Inference | Local QVAC (primary) | Requires internet |
 | Model Selection | Role-aware (4 models) | Single model |

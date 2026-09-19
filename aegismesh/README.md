@@ -1,14 +1,18 @@
-# AegisMesh
+# Vanguard
 
 **Investigate. Challenge. Control.**
 
-AegisMesh is a zero-trust, multi-agent security control plane where specialized AI agents collaborate autonomously to investigate incidents, challenge each other's findings, and converge on actionable verdicts. Runs on **local AI via QVAC** (primary inference, 3-tier fallback) and **P2P via Pear** (peer discovery, OTA updates) — no cloud required. Optional Cloudflare Workers backend for distributed deployments.
+Vanguard is a zero-trust, multi-agent security control plane where specialized AI agents collaborate autonomously to investigate incidents, challenge each other's findings, and converge on actionable verdicts.
+
+The system runs on **local AI inference via QVAC** as its primary engine, with a 3-tier fallback chain (QVAC local → OpenAI cloud → deterministic rules) so it always produces a verdict regardless of connectivity. P2P peer discovery, distributed agent state, and OTA updates flow through **Pear/Tether** — enabling full sovereign deployment where every agent runs on-device with no cloud dependency. For distributed or hosted deployments, an optional **Cloudflare Workers** runtime provides multi-region scaling, Durable Objects for agent state, Workers KV for policies, Queues for async tasks, and the Aegis Gate for policy enforcement. **Huawei openJiuwen** provides multi-agent decomposition and collaboration via A2A gateway, breaking complex goals into parallel specialist tasks. **Browserbase** adds external threat-intel verification through real browser automation, bypassing anti-bot walls to validate suspicious domains, CVEs, and zero-day advisories at their source.
+
+Together these five pillars — QVAC (local AI), Pear (P2P runtime), Cloudflare (distributed hosting), Huawei (swarm orchestration), and Browserbase (external verification) — form a defense-in-depth architecture that works from a single Raspberry Pi up to a global cloud deployment.
 
 ---
 
 ## What it does
 
-When a security incident occurs, AegisMesh assembles a team of specialist agents who investigate from their own perspectives — telemetry scans, network analysis, security audits, change tracking — then challenge each other's conclusions and synthesize a final verdict with confidence scoring and least-destructive remediation recommendations.
+When a security incident occurs, Vanguard assembles a team of specialist agents who investigate from their own perspectives — telemetry scans, network analysis, security audits, change tracking — then challenge each other's conclusions and synthesize a final verdict with confidence scoring and least-destructive remediation recommendations.
 
 The system handles both **false alarms** (benign activity correctly identified as non-threatening) and **real breaches** (unauthorized access with exfiltration risk), including poisoned agents, policy enforcement, quarantine, human approval gates, and physical containment via Aegis Edge.
 
@@ -60,11 +64,13 @@ Court     A2A      (policy)  (optional)
 
 | Provider | Role |
 |----------|------|
-| **Huawei openJiuwen / JiuwenSwarm** | Multi-agent decomposition and collaboration via A2A gateway |
-| **OpenAI** | Evidence Court, counterfactual analysis, least-destructive remediation |
-| **Cloudflare Aegis Gate** | Authorization and policy enforcement |
-| **Aegis Edge** | Signed-capability verification and low-voltage demo enforcement |
-| **Pear/Tether** | P2P runtime for edge deployment — full local AI via QVAC, no cloud needed |
+| **Huawei openJiuwen / JiuwenSwarm** | Multi-agent decomposition and collaboration via A2A gateway — breaks complex goals into parallel specialist swarm tasks |
+| **OpenAI** | Evidence Court, counterfactual analysis, least-destructive remediation (fallback when QVAC is unavailable) |
+| **Cloudflare Workers** | Distributed hosting — multi-region scaling, Durable Objects for agent state, Workers KV for policies, Queues for async tasks |
+| **Cloudflare Aegis Gate** | Authorization and policy enforcement — blocks unauthorized destructive actions before execution |
+| **Aegis Edge** | Signed-capability verification and low-voltage hardware demo enforcement (Raspberry Pi) |
+| **Pear/Tether + QVAC** | Primary local AI runtime — on-device inference with role-aware model selection, P2P distribution via Pear keys, OTA updates, sandboxed Bare worklets |
+| **Browserbase** | External threat-intel verification — real browser automation to validate domains, CVEs, and advisories behind anti-bot walls |
 | **Human NFC** | Dual-control for high-impact actions |
 
 ---
@@ -79,7 +85,7 @@ Court     A2A      (policy)  (optional)
 ### Local development
 
 ```bash
-cd aegismesh
+cd vanguard
 cp .env.example .env
 npm install
 npm run dev
@@ -109,14 +115,17 @@ Then open `http://localhost:3000`.
 docker compose up --build
 ```
 
-### Cloudflare Workers deployment
+### Cloudflare Workers deployment (optional)
 
-```bash
-cd cloudflare
-npx wrangler deploy
-```
+Cloudflare Workers provides the scalable hosting layer for Vanguard — global edge distribution, Durable Objects for agent state, Workers KV for policies and skills, Workers Queues for async task processing, and Aegis Gate for policy enforcement.
 
-Set environment secrets via `npx wrangler secret put <NAME>`.
+**Key services:**
+- **Durable Objects** — Agent state persistence, A2A conversation threads, live event fan-out
+- **Workers KV** — Policies, skills, cached verdicts; automatically replicates globally
+- **Workers Queues** — Async processing (AI verify, events, scenarios, A2A routing, skills) with retry and dead-letter semantics
+- **Aegis Gate** — Dedicated authorization Worker enforcing capability policies before destructive actions
+
+Deploy with `npx wrangler deploy` from the `cloudflare/` directory. Set secrets via `npx wrangler secret put <NAME>`.
 
 ### Pear/Tether — Local AI (primary)
 
@@ -129,34 +138,39 @@ npm run make:linux-x64     # cross-platform build
 
 All AI runs locally via QVAC. No cloud dependency. See `pear-app/DEMO.md` for the hackathon demo flow.
 
+**QVAC model selection** — each agent type loads the model optimized for its role: LEAD and SHIFT use QVAC-3B (complex synthesis); GUARD, SCAN, DOUBT, and PROOF use QVAC-Sec (security-focused); RELAY and ACT use QVAC-1B (lightweight). Inference is cached via SHA-256 hash with a 5-minute TTL. A 3-tier fallback (QVAC → OpenAI → Deterministic rules) ensures a verdict is always produced. `QVAC_TEST_MODE=1` enables a 150ms demo mode with no GPU required.
+
+**Pear distribution and lifecycle** — PeerRegistry (P2P discovery via Hyperswarm, direct messaging, state sync), OTASystem (version checking, delta downloads, atomic installs), AgentDistributor (distributed agent registry), and lifecycle hooks (install/upgrade/uninstall for extension and UI injection). `isPearRuntime()` detection lets code adapt behavior based on the runtime environment.
+
 Install on any machine from a Pear key (no internet needed):
 
 ```bash
 cd pear-app
 pear install ./agent-0.1.0.tar.gz
-pear run pear://<aegismesh-key>
+pear run pear://<vanguard-key>
 ```
 
 Agents run in sandboxed Bare worklets with P2P Hyperswarm networking and self-updates via Pear OTA. **All AI inference is local via QVAC**.
 
 ### Browserbase — External Threat Intel (cloud, optional)
 
-When agents detect suspicious domains, CVEs, or zero-day exploits, Browserbase provides live browser automation to verify external sources behind anti-bot walls, CAPTCHAs, and Cloudflare protection.
+Browserbase provides real browser automation for external threat-intel verification. When agents detect suspicious domains, CVEs, or zero-day exploits, Browserbase navigates to live sources behind anti-bot walls, CAPTCHAs, and Cloudflare protection to verify threats at their source.
+
+Two tools power the integration:
+
+- `browserbase_search_intel` — Web search for CVEs, advisories, vendor documentation, and threat feeds
+- `browserbase_verify_web_target` — Navigate vendor trust centers and SOC 2 compliance dashboards to confirm exposure
+
+Agents auto-dispatch Browserbase when their analysis detects external incident indicators (`needsBrowserbase` flag set by the orchestrator when input contains http/url/domain/CVE/SOC2/trust center/vendor/patch/advisory/zero-day/website keywords). Wired into `cloudflare/agent-orchestrator.mjs` — verifier-01 and network-01 trigger it automatically. Requires `BROWSERBASE_API_KEY`. Without it, all agent analysis remains local (QVAC only).
 
 ```bash
-cd aegismesh
+cd vanguard
 npm install @browserbasehq/sdk
 export BROWSERBASE_API_KEY="your_key"
 
 # Run standalone investigation
 node scripts/browserbase-investigate.js
 ```
-
-Integrates via `cloudflare/agent-tools.mjs`:
-- `browserbase_search_intel` — Web search for CVEs, advisories, vendor docs
-- `browserbase_verify_web_target` — Navigate trust centers, SOC 2 dashboards
-
-Wired into `cloudflare/agent-orchestrator.mjs` — verifier-01 and network-01 agents auto-dispatch Browserbase for external incidents. Requires `BROWSERBASE_API_KEY`. Without it, all agent analysis remains local (QVAC only).
 
 ---
 
@@ -239,6 +253,8 @@ OPENAI_MODEL=gpt-5.6-terra
 ```
 
 ### Huawei openJiuwen / JiuwenSwarm
+
+Huawei openJiuwen provides multi-agent decomposition and collaboration via A2A gateway. When the orchestrator receives a complex goal, openJiuwen breaks it into parallel specialist tasks distributed across agent swarms, then aggregates results — enabling human-like multi-perspective reasoning at scale.
 
 ```env
 JIUWEN_A2A_URL=http://127.0.0.1:19100/a2a
@@ -338,7 +354,7 @@ pear-app/           Pear/Tether local AI runtime (PRIMARY for sovereign deploy)
   └── DEMO.md             Hackathon demo flow
 edge/               Raspberry Pi enforcement service
   └── edge_server.py      Edge agent server (no Python deps)
-data/               Local persistence (data/aegismesh.json)
+data/               Local persistence (data/vanguard.json)
 docs/               Demo flow, API docs
 public/             favicon, manifest
 scripts/            Smoke tests, validation
@@ -361,6 +377,7 @@ scripts/            Smoke tests, validation
 - Node.js 22+ (Local Dev Fallback)
 - OpenAI API (Evidence Court, optional fallback)
 - Huawei openJiuwen / JiuwenSwarm A2A (multi-agent orchestration, optional)
+- Browserbase (external threat-intel browser automation, optional)
 - Aegis Edge (Hardware Enforcement)
 - Docker / Docker Compose
 - Vercel (Frontend Hosting)

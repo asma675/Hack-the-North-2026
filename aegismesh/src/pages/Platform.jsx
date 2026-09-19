@@ -38,7 +38,7 @@ export default function Platform() {
   return (
     <div className="p-6 space-y-6 max-w-[1200px] mx-auto">
       <div>
-        <h1 className="text-2xl font-display font-bold tracking-tight">AegisMesh Platform</h1>
+        <h1 className="text-2xl font-display font-bold tracking-tight">Vanguard Platform</h1>
         <p className="text-sm text-muted-foreground mt-1">The trust infrastructure for the agentic enterprise</p>
       </div>
 
@@ -97,7 +97,7 @@ export default function Platform() {
         <h2 className="text-xl font-display font-bold">AI intelligence is becoming abundant.</h2>
         <h2 className="text-xl font-display font-bold mt-1 aegis-text-cyan">Production authority remains scarce.</h2>
         <p className="text-sm text-muted-foreground mt-4 max-w-lg mx-auto">
-          AegisMesh allows enterprises to safely give AI agents more responsibility without giving those agents unlimited power.
+          Vanguard allows enterprises to safely give AI agents more responsibility without giving those agents unlimited power.
         </p>
       </div>
     </div>

@@ -10,7 +10,7 @@ export default {
 
     if (url.pathname === '/api/health') {
       const { integrationStatus } = await import('../server/integrations.mjs');
-      return new Response(JSON.stringify({ ok: true, name: 'AegisMesh API', time: new Date().toISOString(), integrations: integrationStatus(), runtime: 'cloudflare-workers' }), {
+      return new Response(JSON.stringify({ ok: true, name: 'Vanguard API', time: new Date().toISOString(), integrations: integrationStatus(), runtime: 'cloudflare-workers' }), {
         headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
       });
     }

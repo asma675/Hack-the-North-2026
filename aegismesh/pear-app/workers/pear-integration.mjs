@@ -1,4 +1,4 @@
-// AegisMesh Sovereign — Pear runtime integration layer.
+// Vanguard Sovereign — Pear runtime integration layer.
 // Manages P2P peer discovery, OTA updates, distributed agent registry,
 // and Pear lifecycle hooks. No cloud required.
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'bare:fs';
@@ -6,7 +6,7 @@ import { join } from 'bare:path';
 import { createHash } from 'bare:crypto';
 
 // ── Pear App Identity ────────────────────────────────────────────────
-export const APP_ID = 'aegismesh-sovereign';
+export const APP_ID = 'vanguard-sovereign';
 export const APP_VERSION = '1.0.0';
 export const PEAR_KEY = process.env.PEAR_KEY || '';
 

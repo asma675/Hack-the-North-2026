@@ -1,6 +1,6 @@
-// Compatibility client for the original export, backed by the standalone AegisMesh REST API.
+// Compatibility client for the original export, backed by the standalone Vanguard REST API.
 // Existing Base44-generated pages keep the same `base44.auth/entities/functions/app`
-// shape while requests now go to our own AegisMesh backend.
+// shape while requests now go to our own Vanguard backend.
 const TOKEN_KEY='aegis_access_token';
 const apiBase=import.meta.env.VITE_API_URL || '';
 

@@ -16,7 +16,7 @@ export default function Codex() {
     <div className="p-6 space-y-6 max-w-[1000px] mx-auto">
       <div>
         <h1 className="text-2xl font-display font-bold tracking-tight">Codex</h1>
-        <p className="text-sm text-muted-foreground mt-1">Genuine ways OpenAI Codex contributed to AegisMesh development</p>
+        <p className="text-sm text-muted-foreground mt-1">Genuine ways OpenAI Codex contributed to Vanguard development</p>
       </div>
 
       <div className="aegis-panel rounded-lg p-4 border-amber-500/20">

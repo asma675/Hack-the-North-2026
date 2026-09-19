@@ -2,7 +2,7 @@
 
 ## Project context
 
-AegisMesh is a standalone full-stack hackathon application. The frontend originated as a Base44 export, but the hosted Base44 runtime has been removed. Do **not** add Base44 CLI, SDK, or hosted-backend dependencies back into the project.
+Vanguard is a standalone full-stack hackathon application. The frontend originated as a Base44 export, but the hosted Base44 runtime has been removed. Do **not** add Base44 CLI, SDK, or hosted-backend dependencies back into the project.
 
 Start with `README.md` and `ARCHITECTURE.md`.
 

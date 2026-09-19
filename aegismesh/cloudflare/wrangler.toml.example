@@ -1,4 +1,0 @@
-name = "aegis-gate"
-main = "worker.js"
-compatibility_date = "2026-09-01"
-# Add with: npx wrangler secret put GATE_TOKEN

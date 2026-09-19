@@ -1,4 +1,4 @@
-// AegisMesh — Browserbase live investigation demo.
+// Vanguard — Browserbase live investigation demo.
 // Run: BROWSERBASE_API_KEY=your_key node scripts/browserbase-investigate.js
 import { Browserbase } from '@browserbasehq/sdk';
 
@@ -19,7 +19,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('🛡️ AegisMesh — Browserbase Threat Intel Investigation\n');
+  console.log('🛡️ Vanguard — Browserbase Threat Intel Investigation\n');
   console.log(`📡 ${TARGETS.length} external targets queued for Browserbase verification\n`);
 
   const results = [];

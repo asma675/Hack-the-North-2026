@@ -24,7 +24,7 @@ export default function TrustCenter() {
       <div className="aegis-panel rounded-lg p-8 text-center aegis-glow-cyan">
         <h2 className="text-3xl font-display font-bold tracking-tight">AI recommends. <span className="aegis-text-cyan">Aegis authorizes.</span></h2>
         <p className="text-sm text-muted-foreground mt-3 max-w-xl mx-auto">
-          AI intelligence is becoming abundant. Production authority remains scarce. AegisMesh is the trust infrastructure that bridges them.
+          AI intelligence is becoming abundant. Production authority remains scarce. Vanguard is the trust infrastructure that bridges them.
         </p>
       </div>
 

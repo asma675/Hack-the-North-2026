@@ -55,8 +55,8 @@ export async function handleApi(req,res){
     res.setHeader('Cache-Control','no-store');
     if(req.method==='OPTIONS'){res.statusCode=204;return res.end();}
     const url=new URL(req.url,'http://localhost');const path=url.pathname;
-    if(path==='/api/health')return json(res,200,{ok:true,name:'AegisMesh API',time:new Date().toISOString(),integrations:integrationStatus()});
-    if(path==='/api/public-settings')return json(res,200,{id:'aegismesh',public_settings:{auth_required:true,google_oauth_enabled:false,demo_enabled:true}});
+    if(path==='/api/health')return json(res,200,{ok:true,name:'Vanguard API',time:new Date().toISOString(),integrations:integrationStatus()});
+    if(path==='/api/public-settings')return json(res,200,{id:'vanguard',public_settings:{auth_required:true,google_oauth_enabled:false,demo_enabled:true}});
     if(path==='/api/waitlist'&&req.method==='POST'){const b=await readBody(req);const email=String(b.email||'').trim().toLowerCase();if(!email.includes('@'))return bad(res,400,'Enter a valid email');const rec=await mutate(st=>{let r=st.waitlist.find(x=>x.email===email);if(!r){r={id:newId('wait'),email,company:String(b.company||'').slice(0,120),role:String(b.role||'').slice(0,120),created_at:new Date().toISOString()};st.waitlist.push(r);}return r;});return json(res,201,{ok:true,id:rec.id});}
     const a=await authRoutes(req,res,path);if(a!==false)return a;
     const e=await entityRoutes(req,res,path,url);if(e!==false)return e;

@@ -35,4 +35,4 @@ dist-ssr
 
 .env
 .vite
-data/aegismesh.json
+data/vanguard.json

@@ -1,4 +1,4 @@
-// AegisMesh Agent Thread — runs in worker_threads for isolation.
+// Vanguard Agent Thread — runs in worker_threads for isolation.
 // Each agent gets its own thread, QVAC inference context.
 import { parentPort, workerData } from 'worker_threads';
 import { infer, ROLE_MODELS } from './qvac.js';
@@ -9,7 +9,7 @@ let alive = true;
 let currentModel = config.model || ROLE_MODELS[config.role] || 'qvac-1b';
 let temperature = config.temperature ?? 0.3;
 let maxTokens = config.maxTokens ?? 1024;
-let systemPrompt = config.system || `You are AegisMesh ${config.role || 'UNKNOWN'} agent (${agentId}). Zero-trust, local-first.`;
+let systemPrompt = config.system || `You are Vanguard ${config.role || 'UNKNOWN'} agent (${agentId}). Zero-trust, local-first.`;
 let trustLevel = config.trustLevel || 'verified';
 
 parentPort.on('message', async (signal) => {

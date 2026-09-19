@@ -6,7 +6,7 @@ export const AGENTS = [
   {agent_key:'change-01',name:'Change Agent',role:'Change Investigator',provider:'openJiuwen',permissions:['change.read','deployments.read','maintenance.read'],denied:['network.write','hardware.execute'],tools:['change.search','maintenance.lookup','deployment.diff'],trust_score:97,status:'IDLE',violations:0,quarantined:false},
   {agent_key:'skeptic-01',name:'Skeptic',role:'Adversarial Reviewer',provider:'openJiuwen',permissions:['evidence.read','hypothesis.challenge'],denied:['network.write','hardware.execute'],tools:['claim.challenge','evidence.compare'],trust_score:99,status:'IDLE',violations:0,quarantined:false},
   {agent_key:'verifier-01',name:'Verifier',role:'Evidence Judge',provider:'OpenAI',permissions:['evidence.read','verdict.write','remediation.propose'],denied:['network.write','hardware.execute'],tools:['evidence.adjudicate','counterfactual.simulate','remediation.plan'],trust_score:99,status:'IDLE',violations:0,quarantined:false},
-  {agent_key:'executor-01',name:'Executor',role:'Controlled Executor',provider:'AegisMesh',permissions:['action.request','network.isolate','credential.rotate'],denied:['unbounded.execute'],tools:['action.propose','capability.consume'],trust_score:99,status:'IDLE',violations:0,quarantined:false},
+  {agent_key:'executor-01',name:'Executor',role:'Controlled Executor',provider:'Vanguard',permissions:['action.request','network.isolate','credential.rotate'],denied:['unbounded.execute'],tools:['action.propose','capability.consume'],trust_score:99,status:'IDLE',violations:0,quarantined:false},
 ];
 
 export function freshState(){

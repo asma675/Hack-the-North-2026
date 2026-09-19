@@ -230,12 +230,12 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
 
     // ═══ PEAR STATUS ═══
     if (pathname === '/api/pear/status') {
-      let pearInfo = { isPearRuntime: false, appId: 'aegismesh-sovereign', version: '1.0.0', key: 'local-dev' };
+      let pearInfo = { isPearRuntime: false, appId: 'vanguard-sovereign', version: '1.0.0', key: 'local-dev' };
       try {
         if (pearPeers) {
           pearInfo = {
             isPearRuntime: typeof pear !== 'undefined',
-            appId: 'aegismesh-sovereign',
+            appId: 'vanguard-sovereign',
             version: '1.0.0',
             key: process.env.PEAR_KEY ? process.env.PEAR_KEY.slice(0, 8) + '...' : 'local-dev',
             localPeerId: pearPeers.localPeerId,
@@ -269,7 +269,7 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
 
     // ═══ OTA UPDATES ═══
     if (pathname === '/api/ota/status') {
-      let otaInfo = { currentVersion: '1.0.0', pendingUpdate: null, totalUpdates: 0, appId: 'aegismesh-sovereign' };
+      let otaInfo = { currentVersion: '1.0.0', pendingUpdate: null, totalUpdates: 0, appId: 'vanguard-sovereign' };
       try {
         if (pearOTA) otaInfo = pearOTA.getStatus();
       } catch {}
@@ -308,7 +308,7 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
         role: body.role || 'GUARD',
         model: body.model || 'qvac-1b',
         trustLevel: body.trustLevel || 'verified',
-        system: body.system || 'AegisMesh guard agent',
+        system: body.system || 'Vanguard guard agent',
         createdAt: Date.now(),
         tasksCompleted: 0,
         peerId: pearPeers?.localPeerId || 'local',
@@ -385,6 +385,6 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
   });
 
   server.listen(port, host);
-  console.log(`AegisMesh Sovereign listening on http://${host}:${port}`);
+  console.log(`Vanguard Sovereign listening on http://${host}:${port}`);
   return server;
 }

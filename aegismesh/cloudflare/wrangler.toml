@@ -1,4 +1,4 @@
-name = "aegismesh"
+name = "vanguard"
 main = "worker-entry.mjs"
 rule = "ESModule"
 compatibility_date = "2026-09-01"
@@ -28,8 +28,8 @@ new_classes = ["AgentDurableObject", "GateDurableObject"]
 
 [rules]
 type = "Service"
-pattern = "aegismesh.dev/*"
-zone_id = "aegismesh-zone"
+pattern = "vanguard.dev/*"
+zone_id = "vanguard-zone"
 
 [ai]
 providers = ["openai"]
