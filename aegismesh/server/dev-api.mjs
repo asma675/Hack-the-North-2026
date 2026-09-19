@@ -1,0 +1,1 @@
+import http from 'node:http';import { handleApi } from './app.mjs';import { ensureDemoUser } from './auth.mjs';await ensureDemoUser();const port=Number(process.env.API_PORT||8787);http.createServer((req,res)=>handleApi(req,res)).listen(port,()=>console.log(`Aegis API dev server http://localhost:${port}`));

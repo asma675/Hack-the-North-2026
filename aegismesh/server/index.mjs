@@ -1,0 +1,11 @@
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { handleApi } from './app.mjs';
+import { ensureDemoUser } from './auth.mjs';
+const __dirname=path.dirname(fileURLToPath(import.meta.url));const root=path.resolve(__dirname,'..');const dist=path.join(root,'dist');const port=Number(process.env.PORT||3000);
+const mime={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon','.json':'application/json'};
+await ensureDemoUser();
+const server=http.createServer(async(req,res)=>{if((req.url||'').startsWith('/api/'))return handleApi(req,res);let pathname=decodeURIComponent((req.url||'/').split('?')[0]);if(pathname==='/'||!path.extname(pathname))pathname='/index.html';let file=path.join(dist,pathname);if(!file.startsWith(dist))file=path.join(dist,'index.html');fs.stat(file,(err,st)=>{if(err||!st.isFile()){file=path.join(dist,'index.html');}fs.readFile(file,(e,data)=>{if(e){res.statusCode=503;return res.end('Build the frontend first with npm run build');}res.setHeader('Content-Type',mime[path.extname(file)]||'application/octet-stream');res.end(data);});});});
+server.listen(port,()=>console.log(`AegisMesh running at http://localhost:${port}`));

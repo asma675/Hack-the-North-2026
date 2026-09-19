@@ -1,0 +1,12 @@
+services:
+  aegismesh:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - aegis-data:/app/data
+    restart: unless-stopped
+volumes:
+  aegis-data:
