@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AegisMesh Sovereign — Local AI, P2P Deployed</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080c14; color: #c8d6e5; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 12px; }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  header { background: #0a1020; padding: 8px 16px; border-bottom: 1px solid #1a2a4a; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  header h1 { font-size: 14px; color: #f85149; font-weight: 700; letter-spacing: 2px; }
+  .badge { background: #1a2a4a; color: #f85149; padding: 2px 8px; border-radius: 3px; font-size: 10px; letter-spacing: 1px; }
+  .badge.green { color: #3fb950; border: 1px solid #238636; }
+  .badge.purple { color: #bc8cff; border: 1px solid #6e40c9; }
+  .status-dot { margin-left: auto; display: flex; gap: 14px; align-items: center; font-size: 10px; }
+  .status-dot .item { display: flex; align-items: center; gap: 4px; }
+  .status-dot .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .status-dot .dot.on { background: #3fb950; box-shadow: 0 0 4px #3fb950; }
+  .status-dot .dot.off { background: #6e7681; }
+  .status-dot .dot.warn { background: #f0883e; }
+
+  #main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+  #sidebar { width: 240px; background: #0a1020; border-right: 1px solid #1a2a4a; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  .panel-header { padding: 8px 10px; font-size: 10px; text-transform: uppercase; color: #6e7681; letter-spacing: 1px; border-bottom: 1px solid #1a2a4a; display: flex; justify-content: space-between; align-items: center; }
+  #agent-list { flex: 1; overflow-y: auto; padding: 4px; }
+  .agent-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; transition: background 0.15s; border-left: 2px solid transparent; }
+  .agent-item:hover { background: #1a2a4a; }
+  .agent-item.active { background: #1a2a4a; border-left-color: #f85149; }
+  .agent-item .name { font-weight: 600; font-size: 11px; }
+  .agent-item .role-label { color: #8b949e; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .agent-item .meta { font-size: 9px; color: #6e7681; margin-top: 2px; }
+  .agent-item .model-tag { color: #bc8cff; font-size: 9px; }
+
+  #right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+  #metrics-bar { background: #0a1020; padding: 4px 12px; border-bottom: 1px solid #1a2a4a; display: flex; gap: 16px; font-size: 9px; flex-shrink: 0; flex-wrap: wrap; }
+  .metric { display: flex; flex-direction: column; }
+  .metric .label { color: #6e7681; text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric .value { color: #c8d6e5; font-weight: 600; }
+  .metric .value.green { color: #3fb950; }
+  .metric .value.purple { color: #bc8cff; }
+  .metric .value.yellow { color: #f0883e; }
+
+  #chat { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .msg { max-width: 75%; padding: 8px 12px; border-radius: 6px; line-height: 1.5; font-size: 11px; }
+  .msg.user { background: #1a3a6a; align-self: flex-end; border-bottom-right-radius: 2px; }
+  .msg.agent { background: #0f1824; border: 1px solid #1a2a4a; align-self: flex-start; border-bottom-left-radius: 2px; }
+  .msg.system { background: transparent; color: #6e7681; text-align: center; font-size: 10px; align-self: center; font-style: italic; }
+  .msg .meta { font-size: 9px; color: #6e7681; margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .msg .meta .provider { padding: 1px 4px; border-radius: 2px; font-weight: 600; }
+  .msg .meta .provider.qvac { background: #23863620; color: #3fb950; }
+  .msg .meta .provider.openai { background: #1a3a6a; color: #58a6ff; }
+  .msg .meta .provider.deterministic { background: #f0883e20; color: #f0883e; }
+  .msg .meta .provider.cache { background: #6e40c920; color: #bc8cff; }
+  .msg .label { font-weight: 600; font-size: 10px; margin-bottom: 3px; }
+  .msg.agent .label { color: #f85149; }
+  .msg.agent .role-icon { color: #bc8cff; margin-right: 4px; }
+
+  #pear-bar { background: #0a1020; border-top: 1px solid #1a2a4a; padding: 4px 12px; font-size: 9px; display: flex; gap: 12px; align-items: center; flex-shrink: 0; color: #6e7681; }
+  #pear-bar .pear-info { color: #bc8cff; }
+
+  #input-area { padding: 8px 12px; background: #0a1020; border-top: 1px solid #1a2a4a; display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  #input-area select { background: #1a2a4a; border: 1px solid #1a2a4a; border-radius: 4px; padding: 6px 8px; color: #c8d6e5; font-family: inherit; font-size: 10px; outline: none; }
+  #input-area input { flex: 1; background: #1a2a4a; border: 1px solid #1a2a4a; border-radius: 4px; padding: 8px 12px; color: #c8d6e5; font-family: inherit; font-size: 12px; outline: none; }
+  #input-area input:focus { border-color: #f85149; }
+  #input-area button { background: #f85149; color: #fff; border: none; border-radius: 4px; padding: 8px 16px; font-family: inherit; font-weight: 600; cursor: pointer; font-size: 11px; }
+  #input-area button:hover { background: #da3633; }
+  #input-area button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #bottom-panel { height: 140px; background: #0a1020; border-top: 1px solid #1a2a4a; display: flex; flex-shrink: 0; overflow: hidden; }
+  #bottom-tabs { display: flex; background: #080c14; border-bottom: 1px solid #1a2a4a; }
+  #bottom-tabs .tab { padding: 4px 10px; font-size: 9px; text-transform: uppercase; cursor: pointer; color: #6e7681; letter-spacing: 0.5px; border-bottom: 2px solid transparent; }
+  #bottom-tabs .tab.active { color: #c8d6e5; border-bottom-color: #f85149; }
+  #bottom-content { flex: 1; overflow-y: auto; padding: 6px; font-size: 10px; }
+  .audit-entry { padding: 2px 0; border-bottom: 1px solid #0f1824; color: #8b949e; }
+  .audit-entry .ts { color: #6e7681; margin-right: 6px; }
+  .audit-entry .action { color: #bc8cff; font-weight: 600; }
+  .peer-item { padding: 3px 0; color: #8b949e; }
+  .peer-item .peer-id { color: #bc8cff; }
+  .peer-item .cap { color: #3fb950; font-size: 9px; }
+
+  .model-select { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+  .model-select label { font-size: 9px; color: #6e7681; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>AEGISMESH</h1>
+    <span class="badge">SOVEREIGN</span>
+    <span class="badge green" id="qvac-badge">QVAC</span>
+    <span class="badge purple" id="pear-badge">PEAR</span>
+    <div class="status-dot">
+      <span class="item" id="status-qvac"><span class="dot off"></span> QVAC</span>
+      <span class="item" id="status-pear"><span class="dot off"></span> Pear</span>
+      <span class="item" id="status-peer"><span class="dot off"></span> Peers</span>
+    </div>
+  </header>
+
+  <div id="main">
+    <div id="sidebar">
+      <div class="panel-header">Agents <span id="agent-count">0</span></div>
+      <div id="agent-list"></div>
+    </div>
+
+    <div id="right-panel">
+      <div id="metrics-bar">
+        <div class="metric"><span class="label">Latency</span><span class="value green" id="m-latency">0ms</span></div>
+        <div class="metric"><span class="label">Requests</span><span class="value" id="m-requests">0</span></div>
+        <div class="metric"><span class="label">Cache</span><span class="value purple" id="m-cache">0</span></div>
+        <div class="metric"><span class="label">Tokens</span><span class="value" id="m-tokens">0</span></div>
+        <div class="metric"><span class="label">Peers</span><span class="value" id="m-peers">0</span></div>
+        <div class="metric"><span class="label">Audit</span><span class="value" id="m-audit">0</span></div>
+        <div class="metric"><span class="label">Version</span><span class="value yellow" id="m-version">1.0.0</span></div>
+      </div>
+
+      <div id="chat">
+        <div class="msg system">AegisMesh Sovereign — Local AI + P2P. Click an agent to start investigating.</div>
+      </div>
+
+      <div id="pear-bar">
+        <span>PEAR:</span>
+        <span class="pear-info" id="pear-version">v1.0.0</span>
+        <span>|</span>
+        <span id="pear-peer-id">Peer: —</span>
+        <span>|</span>
+        <span id="pear-ota">OTA: idle</span>
+      </div>
+
+      <div id="input-area">
+        <select id="model-select">
+          <option value="qvac-1b">QVAC-1B (fast)</option>
+          <option value="qvac-3b" selected>QVAC-3B (balanced)</option>
+          <option value="qvac-sec">QVAC-Sec (security)</option>
+          <option value="smollm2-360m">SmolLM2 (demo)</option>
+        </select>
+        <input id="input" type="text" placeholder="Ask agents to investigate..." autocomplete="off">
+        <button id="btn-send">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottom-panel">
+    <div id="bottom-tabs">
+      <div class="tab active" data-tab="audit">Audit Log</div>
+      <div class="tab" data-tab="peers">Peers</div>
+      <div class="tab" data-tab="ota">OTA Updates</div>
+    </div>
+    <div id="bottom-content">
+      <div class="audit-entry"><span class="ts">--</span> Waiting for activity...</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('btn-send');
+const agentList = document.getElementById('agent-list');
+const modelSelect = document.getElementById('model-select');
+const bottomTabs = document.querySelectorAll('#bottom-tabs .tab');
+const bottomContent = document.getElementById('bottom-content');
+
+let currentTab = 'audit';
+let selectedAgent = null;
+let isSending = false;
+let pearInfo = null;
+let auditEntries = [];
+let metrics = { latency: 0, requests: 0, cache: 0, tokens: 0, peers: 0 };
+
+const agentRoles = {
+  LEAD: { icon: '◈', color: '#f85149' },
+  GUARD: { icon: '🛡', color: '#3fb950' },
+  RELAY: { icon: '🌐', color: '#58a6ff' },
+  SCAN: { icon: '📡', color: '#bc8cff' },
+  SHIFT: { icon: '⚙', color: '#f0883e' },
+  DOUBT: { icon: '🔍', color: '#8b949e' },
+  PROOF: { icon: '✓', color: '#3fb950' },
+  ACT: { icon: '⚡', color: '#f85149' },
+};
+
+// ── Seed agents ──────────────────────────────────────────
+const seedAgents = [
+  { id: 'commander-01', name: 'Swarm Commander', role: 'LEAD', model: 'qvac-3b', trustLevel: 98, peerId: 'local' },
+  { id: 'security-02', name: 'Security Investigator', role: 'GUARD', model: 'qvac-sec', trustLevel: 96, peerId: 'local' },
+  { id: 'network-01', name: 'Network Investigator', role: 'RELAY', model: 'qvac-1b', trustLevel: 95, peerId: 'local' },
+  { id: 'telemetry-03', name: 'Telemetry Investigator', role: 'SCAN', model: 'qvac-sec', trustLevel: 93, peerId: 'local' },
+];
+const agents = new Map();
+seedAgents.forEach(a => agents.set(a.id, { ...a, status: 'active', tasksCompleted: 0, createdAt: Date.now() }));
+selectedAgent = agents.get('commander-01');
+
+// ── Render ───────────────────────────────────────────────
+function renderAgents() {
+  agentList.innerHTML = '';
+  for (const [id, a] of agents) {
+    const role = agentRoles[a.role] || { icon: '?', color: '#8b949e' };
+    const div = document.createElement('div');
+    div.className = 'agent-item' + (id === selectedAgent?.id ? ' active' : '');
+    div.innerHTML = `
+      <div class="name"><span style="color:${role.color}">${role.icon}</span> ${a.name}</div>
+      <div class="role-label">${a.role} · ${a.model}</div>
+      <div class="meta">trust: ${a.trustLevel} · <span class="model-tag">${a.peerId}</span></div>
+    `;
+    div.onclick = () => { selectedAgent = agents.get(id); renderAgents(); addSystemMsg(`Selected: ${a.name} (${a.role})`); };
+    agentList.appendChild(div);
+  }
+  document.getElementById('agent-count').textContent = agents.size;
+}
+
+function addMsg(text, from, meta = '') {
+  const div = document.createElement('div');
+  div.className = `msg ${from}`;
+  const label = from === 'user' ? 'You' : from === 'system' ? '' : selectedAgent?.name || 'Agent';
+  const roleHtml = from === 'agent' && selectedAgent ? `<span class="role-icon">${agentRoles[selectedAgent.role]?.icon || ''}</span>` : '';
+  div.innerHTML = `<div class="label">${roleHtml}${label}</div>${text}${meta ? `<div class="meta">${meta}</div>` : ''}`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addSystemMsg(text) { addMsg(text, 'system'); }
+
+function updateMetrics(data) {
+  if (data.latency !== undefined) metrics.latency = data.latency;
+  if (data.requests !== undefined) metrics.requests = data.requests;
+  if (data.cache !== undefined) metrics.cache = data.cache;
+  if (data.tokens !== undefined) metrics.tokens = data.tokens;
+  if (data.peers !== undefined) metrics.peers = data.peers;
+  document.getElementById('m-latency').textContent = metrics.latency + 'ms';
+  document.getElementById('m-requests').textContent = metrics.requests;
+  document.getElementById('m-cache').textContent = metrics.cache;
+  document.getElementById('m-tokens').textContent = metrics.tokens;
+  document.getElementById('m-peers').textContent = metrics.peers;
+  document.getElementById('m-audit').textContent = auditEntries.length;
+  document.getElementById('m-version').textContent = data.version || '1.0.0';
+}
+
+function updateStatus(qvacOk, pearOk, peerCount) {
+  const qv = document.getElementById('status-qvac');
+  const pe = document.getElementById('status-pear');
+  const pr = document.getElementById('status-peer');
+  qv.innerHTML = `<span class="dot ${qvacOk ? 'on' : 'warn'}"></span> QVAC`;
+  pe.innerHTML = `<span class="dot ${pearOk ? 'on' : 'off'}"></span> Pear`;
+  pr.innerHTML = `<span class="dot ${peerCount > 0 ? 'on' : 'off'}"></span> Peers`;
+}
+
+function addAuditEntry(entry) {
+  auditEntries.unshift(entry);
+  if (auditEntries.length > 200) auditEntries.pop();
+  if (currentTab === 'audit') renderBottomPanel();
+}
+
+function renderBottomPanel() {
+  if (currentTab === 'audit') {
+    bottomContent.innerHTML = auditEntries.slice(0, 50).map(e => {
+      const ts = new Date(e.ts).toISOString().slice(11, 19);
+      return `<div class="audit-entry"><span class="ts">${ts}</span><span class="action">${e.action || e.type || 'info'}</span> ${JSON.stringify(e).slice(0, 120)}</div>`;
+    }).join('');
+  } else if (currentTab === 'peers') {
+    const peers = pearInfo?.peers || [];
+    bottomContent.innerHTML = peers.length === 0
+      ? '<div class="peer-item">No peers discovered yet. In production, Hyperswarm auto-discovers peers.</div>'
+      : peers.map(p => `<div class="peer-item"><span class="peer-id">${p.peerId?.slice(0, 16) || 'unknown'}</span> — ${p.status || 'connected'} — ${(p.agents || []).length} agents<br><span class="cap">${(p.agents || []).map(a => a.role + ':' + a.model).join(', ') || 'none'}</span></div>`).join('');
+  } else if (currentTab === 'ota') {
+    const status = pearInfo?.ota || {};
+    bottomContent.innerHTML = `
+      <div class="peer-item"><strong>Version:</strong> ${status.currentVersion || '1.0.0'}</div>
+      <div class="peer-item"><strong>Pending:</strong> ${status.pendingUpdate ? `→ ${status.pendingUpdate.to}` : 'none'}</div>
+      <div class="peer-item"><strong>Total Updates:</strong> ${status.totalUpdates || 0}</div>
+      <div class="peer-item"><strong>Key:</strong> ${status.pearKey || 'local-dev'}</div>
+    `;
+  }
+}
+
+// ── API helpers ──────────────────────────────────────────
+async function api(path, options = {}) {
+  try {
+    const res = await fetch(path, {
+      method: options.method || 'GET',
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    return await res.json();
+  } catch (e) { return { error: e.message }; }
+}
+
+async function loadStatus() {
+  const s = await api('/api/status');
+  if (!s.error) {
+    updateMetrics({
+      latency: s.qvac?.avgLatencyMs || 0,
+      requests: s.qvac?.totalRequests || 0,
+      cache: s.qvac?.cacheSize || 0,
+      tokens: s.qvac?.totalTokens || 0,
+      version: '1.0.0',
+    });
+    document.getElementById('m-peers').textContent = s.system?.agents || 0;
+    if (s.system?.qvacTestMode) updateStatus(true, true, 0);
+    s.agents?.forEach(a => agents.set(a.id, a));
+    renderAgents();
+  }
+}
+
+async function loadPearStatus() {
+  const p = await api('/api/pear/status');
+  if (!p.error) {
+    pearInfo = p;
+    document.getElementById('pear-version').textContent = 'v' + (p.version || '1.0.0');
+    document.getElementById('pear-peer-id').textContent = 'Peer: ' + (p.localPeerId?.slice(0, 8) || '—');
+    document.getElementById('pear-ota').textContent = 'OTA: ' + ((p.pendingUpdate) ? 'pending' : 'idle');
+    updateStatus(true, p.isPearRuntime, p.connectedPeers || 0);
+    renderBottomPanel();
+  }
+}
+
+async function loadQvacMetrics() {
+  const m = await api('/api/qvac/metrics');
+  if (!m.error) {
+    updateMetrics({
+      latency: m.summary?.avgLatencyMs || 0,
+      requests: m.summary?.totalRequests || 0,
+      cache: m.summary?.cacheSize || 0,
+      tokens: m.summary?.totalTokens || 0,
+    });
+  }
+}
+
+// ── Send message ─────────────────────────────────────────
+async function sendPrompt(text) {
+  if (isSending || !text.trim()) return;
+  isSending = true; sendBtn.disabled = true;
+  const model = modelSelect.value;
+  input.value = '';
+
+  if (!selectedAgent) { addSystemMsg('Select an agent first'); isSending = false; sendBtn.disabled = false; return; }
+
+  addMsg(text, 'user');
+  addSystemMsg(`${selectedAgent.name} (${selectedAgent.role}) analyzing via ${model}...`);
+
+  try {
+    const res = await api('/api/agent/infer', {
+      method: 'POST',
+      body: { agentId: selectedAgent.id, role: selectedAgent.role, prompt: text, model },
+    });
+
+    const provider = res.provider || 'unknown';
+    const providerClass = provider === 'qvac' ? 'qvac' : provider === 'openai' ? 'openai' : provider === 'deterministic' ? 'deterministic' : provider === 'qvac-cache' ? 'cache' : '';
+    const latency = res.latencyMs || res.totalLatencyMs || 0;
+
+    addMsg(res.text || '(no response)', 'agent',
+      `<span class="provider ${providerClass}">${provider}</span> ${model} · ${latency}ms${res.fromCache ? ' · CACHED' : ''}`
+    );
+
+    metrics.latency = latency;
+    metrics.requests++;
+    if (res.usage?.completionTokens) metrics.tokens += res.usage.completionTokens;
+    updateMetrics(metrics);
+
+    addAuditEntry({ action: 'infer', agent: selectedAgent.id, provider, model, latency });
+  } catch (e) {
+    addMsg(`Error: ${e.message}`, 'agent');
+  }
+
+  isSending = false; sendBtn.disabled = false;
+  input.focus();
+}
+
+// ── Events ───────────────────────────────────────────────
+sendBtn.onclick = () => sendPrompt(input.value);
+input.onkeydown = (e) => { if (e.key === 'Enter') sendPrompt(input.value); };
+
+document.getElementById('btn-send').addEventListener('click', () => sendPrompt(input.value));
+
+// Scenario buttons via double-click on chat area
+chat.addEventListener('dblclick', () => {
+  const scenarios = ['Investigate suspicious outbound traffic', 'Check firewall logs for anomalies', 'Run full security audit', 'Analyze recent login attempts'];
+  input.value = scenarios[Math.floor(Math.random() * scenarios.length)];
+  input.focus();
+});
+
+// Tabs
+bottomTabs.forEach(tab => {
+  tab.onclick = () => {
+    bottomTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    renderBottomPanel();
+  };
+});
+
+// Keyboard shortcut: Ctrl+Enter to send
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendPrompt(input.value);
+});
+
+// ── Init ─────────────────────────────────────────────────
+renderAgents();
+renderBottomPanel();
+loadStatus();
+loadPearStatus();
+loadQvacMetrics();
+
+// Periodic refresh
+setInterval(loadPearStatus, 10000);
+setInterval(loadQvacMetrics, 5000);
+
+// Seed initial audit entries
+addAuditEntry({ action: 'system:start', version: '1.0.0', runtime: 'pear', time: Date.now() });
+addAuditEntry({ action: 'agent:register', agentId: 'commander-01', role: 'LEAD', time: Date.now() });
+addAuditEntry({ action: 'agent:register', agentId: 'security-02', role: 'GUARD', time: Date.now() });
+addAuditEntry({ action: 'agent:register', agentId: 'network-01', role: 'RELAY', time: Date.now() });
+addAuditEntry({ action: 'agent:register', agentId: 'telemetry-03', role: 'SCAN', time: Date.now() });
+input.focus();
+</script>
+</body>
+</html>

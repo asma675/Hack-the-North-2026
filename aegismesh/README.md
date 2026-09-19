@@ -2,7 +2,7 @@
 
 **Investigate. Challenge. Control.**
 
-AegisMesh is a zero-trust, multi-agent security control plane where 7 specialized AI agents collaborate autonomously to investigate incidents, challenge each other's findings, and converge on actionable verdicts. It runs primarily on **Cloudflare Workers** with local Node.js fallback, Raspberry Pi edge enforcement, and optional peer-to-peer deployment via Pear/Tether.
+AegisMesh is a zero-trust, multi-agent security control plane where specialized AI agents collaborate autonomously to investigate incidents, challenge each other's findings, and converge on actionable verdicts. Runs on **local AI via QVAC** (primary inference, 3-tier fallback) and **P2P via Pear** (peer discovery, OTA updates) — no cloud required. Optional Cloudflare Workers backend for distributed deployments.
 
 ---
 
@@ -64,7 +64,7 @@ Court     A2A      (policy)  (optional)
 | **OpenAI** | Evidence Court, counterfactual analysis, least-destructive remediation |
 | **Cloudflare Aegis Gate** | Authorization and policy enforcement |
 | **Aegis Edge** | Signed-capability verification and low-voltage demo enforcement |
-| **Pear/Tether** | P2P runtime for edge deployment (optional) |
+| **Pear/Tether** | P2P runtime for edge deployment — full local AI via QVAC, no cloud needed |
 | **Human NFC** | Dual-control for high-impact actions |
 
 ---
@@ -118,17 +118,26 @@ npx wrangler deploy
 
 Set environment secrets via `npx wrangler secret put <NAME>`.
 
-### Pear/Tether Edge (optional)
-
-Package agents as standalone Pear apps for Raspberry Pi:
+### Pear/Tether — Local AI (primary)
 
 ```bash
-cd edge/pear-agent
-pear build
-pear install ./agent-0.1.0.tar.gz
+cd pear-app
+npm install
+node workers/boot.mjs      # → http://localhost:8000
+npm run make:linux-x64     # cross-platform build
 ```
 
-Agents run in sandboxed Bare worklets with P2P Hyperswarm networking and self-updates via Pear OTA.
+All AI runs locally via QVAC. No cloud dependency. See `pear-app/DEMO.md` for the hackathon demo flow.
+
+Install on any machine from a Pear key (no internet needed):
+
+```bash
+cd pear-app
+pear install ./agent-0.1.0.tar.gz
+pear run pear://<aegismesh-key>
+```
+
+Agents run in sandboxed Bare worklets with P2P Hyperswarm networking and self-updates via Pear OTA. **All AI inference is local via QVAC**.
 
 ---
 
@@ -149,9 +158,9 @@ Each agent has distinct permissions, denied actions, tools, and a trust score th
 
 ---
 
-## Cloudflare Runtime
+## Cloudflare Runtime (optional)
 
-The primary backend runs on Cloudflare Workers with the following components:
+The Cloudflare Workers runtime provides the following components:
 
 | File | Purpose |
 |------|---------|
@@ -274,6 +283,7 @@ npm run lint         # ESLint
 npm run cf:deploy    # Deploy Cloudflare Worker
 npm run cf:dev       # Cloudflare dev mode
 npm run cf:tail      # Cloudflare logs
+npm run make:*       # Pear build (linux-x64, darwin-arm64, etc.)
 ```
 
 ---
@@ -281,11 +291,11 @@ npm run cf:tail      # Cloudflare logs
 ## Repository Map
 
 ```text
-src/            React/Vite UI (original Base44 product preserved + upgrades)
-server/         standalone Node backend (local dev fallback)
-  └── store.mjs     Dual-platform store (KV for CF, file/Redis for local)
-api/            Vercel serverless API entrypoint
-cloudflare/     Cloudflare Workers runtime (primary for hackathon)
+src/                React/Vite UI (original Base44 product preserved + upgrades)
+server/             standalone Node backend (local dev fallback)
+  └── store.mjs       Dual-platform store (KV for CF, file/Redis for local)
+api/                Vercel serverless API entrypoint
+cloudflare/         Cloudflare Workers runtime (optional backend)
   ├── worker-entry.mjs    Main Worker + Agent + A2A endpoints
   ├── agent-orchestrator.mjs  Autonomous agent (7 agents, skills, A2A, Jiuwen)
   ├── agent-tools.mjs     18 agent tools (list, dispatch, A2A, skills, Jiuwen)
@@ -295,34 +305,43 @@ cloudflare/     Cloudflare Workers runtime (primary for hackathon)
   ├── queue-handlers.mjs  Queue consumer (6 task types)
   ├── kv-store.mjs        Dual-platform store
   ├── worker.js           Aegis Gate Worker
-  ├── wrangler.toml       Worker config (KV, DO, Queue)
-  └── package.json        CF dependencies (@cloudflare/agents, wrangler)
-edge/           Raspberry Pi enforcement service
+  └── wrangler.toml       Worker config (KV, DO, Queue)
+pear-app/           Pear/Tether local AI runtime (PRIMARY for sovereign deploy)
+  ├── package.json        Pear + QVAC deps
+  ├── workers/
+  │   ├── boot.mjs        Entry point
+  │   ├── agent-worker.js Agent orchestration worker
+  │   ├── agent-thread.mjs Worker thread per agent
+  │   └── qvac.js         Local AI inference (QVAC + OpenAI fallback)
+  ├── ui/
+  │   ├── index.html      Dashboard UI
+  │   └── app.js          HTTP server + API
+  └── DEMO.md             Hackathon demo flow
+edge/               Raspberry Pi enforcement service
   └── edge_server.py      Edge agent server (no Python deps)
-data/           Local persistence (data/aegismesh.json)
-docs/           Demo flow, API docs
-public/         favicon, manifest
-scripts/        Smoke tests, validation
+data/               Local persistence (data/aegismesh.json)
+docs/               Demo flow, API docs
+public/             favicon, manifest
+scripts/            Smoke tests, validation
 ```
 
 ---
 
 ## Built With
 
-- Cloudflare Workers (primary runtime)
-- Cloudflare Durable Objects
-- Cloudflare Workers KV
-- Cloudflare Workers Queues
-- Agents SDK (@cloudflare/agents)
-- Pear/Tether (P2P runtime, optional)
+- Cloudflare Workers (optional backend)
+- Cloudflare Durable Objects (optional)
+- Cloudflare Workers KV (optional)
+- Cloudflare Workers Queues (optional)
+- Pear/Tether (P2P runtime, primary for sovereign deploy)
 - Bare Runtime (Pear engine)
+- QVAC (local AI inference, no cloud)
 - Hyperswarm (P2P networking)
 - Hypercore / Hyperbee (distributed storage)
 - React + Vite (Frontend)
-- Tailwind CSS
 - Node.js 22+ (Local Dev Fallback)
-- OpenAI API (Evidence Court)
-- Huawei openJiuwen / JiuwenSwarm A2A (Multi-Agent Orchestration)
+- OpenAI API (Evidence Court, optional fallback)
+- Huawei openJiuwen / JiuwenSwarm A2A (multi-agent orchestration, optional)
 - Aegis Edge (Hardware Enforcement)
 - Docker / Docker Compose
 - Vercel (Frontend Hosting)
