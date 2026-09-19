@@ -15,7 +15,7 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
 
   // ── Import QVAC & Pear integration ─────────────────
   let infer, inferForAgent, qvacModels, qvacRoleModels, qvacMetrics, qvacCache;
-  let pearPeers, pearOTA, pearDistributor, pearLifecycle, isPearRuntimeFlag;
+  let pearPeers, pearTransport, pearOTA, pearDistributor, pearLifecycle, isPearRuntimeFlag;
   let bbApiKey, bbAvailable;
   try {
     const qvac = await import('../workers/qvac.js');
@@ -29,6 +29,7 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
   try {
     const pear = await import('../workers/pear-integration.mjs');
     pearPeers = pear.peers;
+    pearTransport = pear.transport;
     pearOTA = pear.ota;
     pearDistributor = pear.distributor;
     pearLifecycle = pear.lifecycle;
@@ -228,6 +229,61 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
       return;
     }
 
+    // ═══ MULTI-AGENT DEBATE ═══
+    if (pathname === '/api/agent/debate' && req.method === 'POST') {
+      const body = JSON.parse(await getBody(req));
+      const question = String(body.prompt || '').trim();
+      if (!question) { json(res, 400, { error: 'prompt required' }); return; }
+      if (!inferForAgent) { json(res, 503, { error: 'QVAC not available' }); return; }
+
+      const participants = [
+        { id: 'security-02', role: 'GUARD', instruction: 'Make the strongest security assessment. State evidence, assumptions, confidence, and recommended action.' },
+        { id: 'network-01', role: 'RELAY', instruction: 'Give an independent network and systems perspective. Point out anything the first analyst may be missing.' },
+        { id: 'skeptic-01', role: 'DOUBT', instruction: 'Act as an adversarial reviewer. Challenge the prior claims, identify unsupported leaps, and propose what would falsify them.' },
+        { id: 'verifier-01', role: 'PROOF', instruction: 'Adjudicate the disagreement. Separate established facts from hypotheses and explain which position is better supported.' },
+        { id: 'commander-01', role: 'LEAD', instruction: 'Reach a final decision from the debate. Resolve disagreements, state remaining uncertainty, and give the least-destructive next action.' },
+      ];
+      const transcript = [];
+
+      for (const participant of participants) {
+        const prior = transcript.length === 0
+          ? 'No other agent has spoken yet. Work independently.'
+          : transcript.map((entry) => `${entry.agent} (${entry.role}): ${entry.text}`).join('\n\n');
+        const prompt = [
+          `Investigation question: ${question}`,
+          `You are participating in a live multi-agent security debate. ${participant.instruction}`,
+          'Read the prior positions below and respond to them directly. Do not claim to have performed actions or consulted sources you did not actually perform or consult.',
+          `Prior positions:\n${prior.slice(-12000)}`,
+        ].join('\n\n');
+        const result = await inferForAgent(participant.id, participant.role, prompt, {
+          model: body.models?.[participant.role],
+          forceTestMode: body.forceTestMode || state.qvacTestMode,
+        });
+        const entry = {
+          agent: participant.id,
+          role: participant.role,
+          text: result.text || '(no response)',
+          provider: result.provider,
+          model: result.model,
+          latencyMs: result.latencyMs || 0,
+          fromCache: !!result.fromCache,
+          testMode: !!result.testMode,
+        };
+        transcript.push(entry);
+        state.totalRequests++;
+        logAudit({ action: 'agent-debate', agentId: participant.id, role: participant.role, provider: result.provider, latencyMs: entry.latencyMs });
+      }
+
+      json(res, 200, {
+        ok: true,
+        question,
+        transcript,
+        liveInference: transcript.some((entry) => !entry.testMode && entry.provider !== 'deterministic'),
+        testMode: transcript.every((entry) => entry.testMode),
+      });
+      return;
+    }
+
     // ═══ PEAR STATUS ═══
     if (pathname === '/api/pear/status') {
       let pearInfo = { isPearRuntime: false, appId: 'vanguard-sovereign', version: '1.0.0', key: 'local-dev' };
@@ -243,6 +299,7 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
             peersWithAgents: pearPeers.getPeersWithAgents().length,
             networkCapabilities: pearPeers.getNetworkCapabilities(),
             peers: pearPeers.getAllPeers(),
+            transport: pearTransport?.status() || null,
           };
         }
       } catch {}
@@ -264,6 +321,32 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
         logAudit({ action: 'peer-connect', peerId: body.peerId });
       }
       json(res, 200, { ok: true });
+      return;
+    }
+
+    if (pathname === '/api/pear/transport' && req.method === 'POST') {
+      const body = JSON.parse(await getBody(req));
+      const result = await pearTransport?.start({ topic: body.topic, agents: body.agents || [] });
+      json(res, 200, result || { started: false, error: 'Pear transport unavailable' });
+      return;
+    }
+
+    if (pathname === '/api/pear/transport' && req.method === 'GET') {
+      json(res, 200, pearTransport?.status() || { started: false, error: 'Pear transport unavailable' });
+      return;
+    }
+
+    if (pathname === '/api/pear/message' && req.method === 'POST') {
+      const body = JSON.parse(await getBody(req));
+      if (!body.type) { json(res, 400, { error: 'type required' }); return; }
+      const result = pearTransport?.send(body) || { delivered: 0, connectedPeers: 0 };
+      logAudit({ action: 'pear-message', type: body.type, delivered: result.delivered });
+      json(res, 200, result);
+      return;
+    }
+
+    if (pathname === '/api/pear/messages' && req.method === 'GET') {
+      json(res, 200, { messages: pearTransport?.getMessages() || [] });
       return;
     }
 

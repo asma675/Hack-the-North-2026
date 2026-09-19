@@ -85,4 +85,4 @@ export async function applyAgentUpdate(updateManifest, store) {
   return { updated: applyResult.applied, agentId, version, config: next };
 }
 
-export { MODELS, ROLE_MODELS, inferForAgent, metrics, cache, peers, ota, distributor, lifecycle, applyAgentUpdate };
+export { MODELS, ROLE_MODELS, inferForAgent, metrics, cache, peers, ota, distributor, lifecycle };

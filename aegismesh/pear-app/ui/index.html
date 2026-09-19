@@ -233,6 +233,18 @@ function addMsg(text, from, meta = '') {
   chat.scrollTop = chat.scrollHeight;
 }
 
+function addDebateMsg(entry) {
+  const agent = agents.get(entry.agent);
+  const role = agentRoles[entry.role] || { icon: '?', color: '#8b949e' };
+  const div = document.createElement('div');
+  div.className = 'msg agent';
+  const providerClass = entry.provider === 'qvac' ? 'qvac' : entry.provider === 'openai' ? 'openai' : entry.provider === 'deterministic' ? 'deterministic' : entry.provider === 'qvac-cache' ? 'cache' : '';
+  const mode = entry.testMode ? ' · TEST MODE' : entry.fromCache ? ' · CACHED' : '';
+  div.innerHTML = `<div class="label"><span class="role-icon" style="color:${role.color}">${role.icon}</span>${agent?.name || entry.agent} · ${entry.role}</div>${entry.text}<div class="meta"><span class="provider ${providerClass}">${entry.provider || 'unknown'}</span> ${entry.model || ''} · ${entry.latencyMs || 0}ms${mode}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
 function addSystemMsg(text) { addMsg(text, 'system'); }
 
 function updateMetrics(data) {
@@ -367,6 +379,18 @@ async function loadPearStatus() {
   }
 }
 
+async function startPearTransport() {
+  const result = await api('/api/pear/transport', {
+    method: 'POST',
+    body: {
+      topic: 'vanguard-sovereign/debate/v1',
+      agents: Array.from(agents.values()).map(({ id, role, model }) => ({ id, role, model })),
+    },
+  });
+  if (result.error) addSystemMsg(`Pear transport unavailable: ${result.error}`);
+  else addSystemMsg(`Pear transport ${result.started ? 'active' : 'starting'} · topic ${result.topic || 'pending'}`);
+}
+
 async function loadQvacMetrics() {
   const m = await api('/api/qvac/metrics');
   if (!m.error) {
@@ -395,28 +419,23 @@ async function sendPrompt(text) {
   if (!selectedAgent) { addSystemMsg('Select an agent first'); isSending = false; sendBtn.disabled = false; return; }
 
   addMsg(text, 'user');
-  addSystemMsg(`${selectedAgent.name} (${selectedAgent.role}) analyzing via ${model}...`);
+  addSystemMsg('Opening five-agent debate: Guard → Relay → Doubt → Proof → Lead...');
 
   try {
-    const res = await api('/api/agent/infer', {
+    const res = await api('/api/agent/debate', {
       method: 'POST',
-      body: { agentId: selectedAgent.id, role: selectedAgent.role, prompt: text, model },
+      body: { prompt: text, models: { LEAD: model } },
     });
 
-    const provider = res.provider || 'unknown';
-    const providerClass = provider === 'qvac' ? 'qvac' : provider === 'openai' ? 'openai' : provider === 'deterministic' ? 'deterministic' : provider === 'qvac-cache' ? 'cache' : provider === 'browserbase' ? 'browserbase' : '';
-    const latency = res.latencyMs || res.totalLatencyMs || 0;
-
-    addMsg(res.text || '(no response)', 'agent',
-      `<span class="provider ${providerClass}">${provider}</span> ${model} · ${latency}ms${res.fromCache ? ' · CACHED' : ''}`
-    );
-
-    metrics.latency = latency;
-    metrics.requests++;
-    if (res.usage?.completionTokens) metrics.tokens += res.usage.completionTokens;
+    if (res.error) throw new Error(res.error);
+    for (const entry of res.transcript || []) {
+      addDebateMsg(entry);
+      metrics.latency = entry.latencyMs || metrics.latency;
+      metrics.requests++;
+      addAuditEntry({ action: 'debate', agent: entry.agent, role: entry.role, provider: entry.provider, latency: entry.latencyMs });
+    }
     updateMetrics(metrics);
-
-    addAuditEntry({ action: 'infer', agent: selectedAgent.id, provider, model, latency });
+    addSystemMsg(res.testMode ? 'Debate complete · deterministic test mode' : 'Debate complete · positions were passed between agents');
   } catch (e) {
     addMsg(`Error: ${e.message}`, 'agent');
   }
@@ -458,6 +477,7 @@ renderAgents();
 renderBottomPanel();
 loadStatus();
 loadPearStatus();
+startPearTransport();
 loadBrowserbaseStatus();
 loadQvacMetrics();
 

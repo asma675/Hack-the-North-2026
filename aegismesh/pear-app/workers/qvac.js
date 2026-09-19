@@ -283,4 +283,4 @@ export async function jiuwenDispatch(query, contextId = 'aegis-demo') {
   return { provider: 'jiuwen', text: data.result?.text || JSON.stringify(data.result).slice(0, 2000) };
 }
 
-export { MODELS, ROLE_MODELS, testMode };
+export { testMode };

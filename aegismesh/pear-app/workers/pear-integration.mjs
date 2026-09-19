@@ -10,6 +10,89 @@ export const APP_ID = 'vanguard-sovereign';
 export const APP_VERSION = '1.0.0';
 export const PEAR_KEY = process.env.PEAR_KEY || '';
 
+const TOPIC_NAMESPACE = 'vanguard-sovereign/debate/v1';
+
+function encodeMessage(message) {
+  return Buffer.from(`${JSON.stringify(message)}\n`);
+}
+
+class PearPeerTransport {
+  constructor(peerRegistry) {
+    this.peerRegistry = peerRegistry;
+    this.swarm = null;
+    this.connections = new Map();
+    this.inbox = [];
+    this.listeners = new Set();
+    this.topic = null;
+    this.started = false;
+    this.error = null;
+  }
+
+  async start({ topic = process.env.PEAR_TOPIC || TOPIC_NAMESPACE, agents = [] } = {}) {
+    if (this.started) return this.status();
+    try {
+      const { default: Hyperswarm } = await import('hyperswarm');
+      this.swarm = new Hyperswarm();
+      this.topic = createHash('sha-256').update(topic).digest();
+      this.agents = agents;
+      this.swarm.on('connection', (socket, info) => this.accept(socket, info));
+      this.swarm.on('error', (error) => { this.error = error.message; });
+      const discovery = this.swarm.join(this.topic, { server: true, client: true });
+      await discovery.flushed();
+      this.started = true;
+      return this.status();
+    } catch (error) {
+      this.error = error.message;
+      return this.status();
+    }
+  }
+
+  accept(socket, info = {}) {
+    const peerId = info.publicKey?.toString('hex') || `peer-${Date.now()}`;
+    const peer = { peerId, socket, buffer: '' };
+    this.connections.set(peerId, peer);
+    this.peerRegistry.addPeer(peerId, { status: 'connected', agents: [] });
+    socket.on('data', (chunk) => this.receive(peer, chunk));
+    socket.on('close', () => {
+      this.connections.delete(peerId);
+      this.peerRegistry.removePeer(peerId);
+    });
+    socket.on('error', () => {});
+    socket.write(encodeMessage({ type: 'peer-hello', peerId: this.peerRegistry.localPeerId, agents: this.agents || [], version: APP_VERSION }));
+  }
+
+  receive(peer, chunk) {
+    peer.buffer += chunk.toString();
+    const lines = peer.buffer.split('\n');
+    peer.buffer = lines.pop() || '';
+    for (const line of lines) {
+      if (!line) continue;
+      try {
+        const message = JSON.parse(line);
+        if (message.type === 'peer-hello') {
+          this.peerRegistry.updatePeer(peer.peerId, { agents: message.agents || [], version: message.version });
+        } else {
+          this.inbox.push({ ...message, peerId: peer.peerId, receivedAt: Date.now() });
+          if (this.inbox.length > 500) this.inbox.shift();
+          for (const listener of this.listeners) listener(this.inbox[this.inbox.length - 1]);
+        }
+      } catch {}
+    }
+  }
+
+  send(message) {
+    const payload = encodeMessage({ ...message, senderPeerId: this.peerRegistry.localPeerId, sentAt: Date.now() });
+    let delivered = 0;
+    for (const peer of this.connections.values()) {
+      if (peer.socket.writable) { peer.socket.write(payload); delivered++; }
+    }
+    return { delivered, connectedPeers: this.connections.size };
+  }
+
+  getMessages(limit = 50) { return this.inbox.slice(-limit); }
+  status() { return { started: this.started, topic: this.topic?.toString('hex') || null, connectedPeers: this.connections.size, receivedMessages: this.inbox.length, error: this.error }; }
+}
+
 // ── Peer Registry ────────────────────────────────────────────────────
 // Tracks all known peers in the P2P network (Hyperswarm).
 class PeerRegistry {
@@ -186,6 +269,7 @@ export function pearStatus() {
 
 // ── Module Init ──────────────────────────────────────────────────────
 export const peers = new PeerRegistry();
+export const transport = new PearPeerTransport(peers);
 export const ota = new OTASystem();
 export const distributor = new AgentDistributor(peers);
 export const lifecycle = createLifecycleHooks();
