@@ -6,14 +6,14 @@ import { useAegis } from '@/lib/useAegis';
 
 // Arena layout — spacious hex-grid spread to prevent bubble overlap
 const POSITIONS = {
-  'commander-01': { x: 50, y: 7 },
-  'security-02':  { x: 16, y: 26 },
-  'network-01':   { x: 84, y: 26 },
-  'skeptic-01':   { x: 50, y: 42 },
-  'telemetry-03': { x: 12, y: 58 },
-  'change-01':    { x: 88, y: 58 },
-  'verifier-01':  { x: 28, y: 80 },
-  'executor-01':  { x: 72, y: 80 },
+  'commander-01': { x: 50, y: 10 },
+  'security-02':  { x: 14, y: 28 },
+  'network-01':   { x: 86, y: 28 },
+  'skeptic-01':   { x: 50, y: 44 },
+  'telemetry-03': { x: 10, y: 60 },
+  'change-01':    { x: 90, y: 60 },
+  'verifier-01':  { x: 26, y: 76 },
+  'executor-01':  { x: 74, y: 76 },
 };
 
 // Personality traits per agent for unique visual identity
@@ -25,7 +25,7 @@ const PERSONALITIES = {
   'change-01':    { aura: 'rgba(244,114,182,0.10)', ringStyle: 'dashed' },
   'skeptic-01':   { aura: 'rgba(251,146,60,0.10)', ringStyle: 'solid' },
   'verifier-01':  { aura: 'rgba(34,211,238,0.10)', ringStyle: 'double' },
-  'executor-01':  { aura: 'rgba(248,113,113,0.10)', ringStyle: 'dashed' },
+  'executor-01': { aura: 'rgba(188,140,255,0.10)', ringStyle: 'dashed' },
 };
 
 const ROLE_LABELS = {
@@ -47,7 +47,7 @@ const ROLE_COLORS = {
   'change-01': '#f472b6',
   'skeptic-01': '#fb923c',
   'verifier-01': '#22d3ee',
-  'executor-01': '#f87171',
+  'executor-01': '#bc8cff',
 };
 
 export function AgentArena({ incidentId, compact = false }) {
@@ -87,7 +87,7 @@ export function AgentArena({ incidentId, compact = false }) {
       <div
         className={cn(
           'relative w-full overflow-hidden rounded-xl border border-border/60 bg-slate-950/40',
-          compact ? 'h-[400px]' : 'h-[560px] md:h-[600px]'
+          compact ? 'h-[440px]' : 'h-[620px] md:h-[700px]'
         )}
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.06),_transparent_50%)]" />
@@ -101,7 +101,7 @@ export function AgentArena({ incidentId, compact = false }) {
               <line
                 key={a.id}
                 x1="50%"
-                y1="7%"
+                y1="10%"
                 x2={`${pos.x}%`}
                 y2={`${pos.y}%`}
                 stroke={a.color}

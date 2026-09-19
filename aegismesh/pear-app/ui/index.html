@@ -14,6 +14,8 @@
   .badge { background: #1a2a4a; color: #f85149; padding: 2px 8px; border-radius: 3px; font-size: 10px; letter-spacing: 1px; }
   .badge.green { color: #3fb950; border: 1px solid #238636; }
   .badge.purple { color: #bc8cff; border: 1px solid #6e40c9; }
+  .badge.blue { color: #58a6ff; border: 1px solid #1f6feb; }
+  .badge.orange { color: #f0883e; border: 1px solid #9e6a03; }
   .status-dot { margin-left: auto; display: flex; gap: 14px; align-items: center; font-size: 10px; }
   .status-dot .item { display: flex; align-items: center; gap: 4px; }
   .status-dot .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
@@ -26,6 +28,7 @@
   #sidebar { width: 240px; background: #0a1020; border-right: 1px solid #1a2a4a; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
   .panel-header { padding: 8px 10px; font-size: 10px; text-transform: uppercase; color: #6e7681; letter-spacing: 1px; border-bottom: 1px solid #1a2a4a; display: flex; justify-content: space-between; align-items: center; }
   #agent-list { flex: 1; overflow-y: auto; padding: 4px; }
+  #bb-panel { border-top: 1px solid #1a2a4a; max-height: 160px; overflow-y: auto; flex-shrink: 0; }
   .agent-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; transition: background 0.15s; border-left: 2px solid transparent; }
   .agent-item:hover { background: #1a2a4a; }
   .agent-item.active { background: #1a2a4a; border-left-color: #f85149; }
@@ -43,6 +46,7 @@
   .metric .value.green { color: #3fb950; }
   .metric .value.purple { color: #bc8cff; }
   .metric .value.yellow { color: #f0883e; }
+  .metric .value.blue { color: #58a6ff; }
 
   #chat { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
   .msg { max-width: 75%; padding: 8px 12px; border-radius: 6px; line-height: 1.5; font-size: 11px; }
@@ -55,6 +59,7 @@
   .msg .meta .provider.openai { background: #1a3a6a; color: #58a6ff; }
   .msg .meta .provider.deterministic { background: #f0883e20; color: #f0883e; }
   .msg .meta .provider.cache { background: #6e40c920; color: #bc8cff; }
+  .msg .meta .provider.browserbase { background: #1f6feb20; color: #58a6ff; }
   .msg .label { font-weight: 600; font-size: 10px; margin-bottom: 3px; }
   .msg.agent .label { color: #f85149; }
   .msg.agent .role-icon { color: #bc8cff; margin-right: 4px; }
@@ -92,9 +97,11 @@
     <h1>AEGISMESH</h1>
     <span class="badge">SOVEREIGN</span>
     <span class="badge green" id="qvac-badge">QVAC</span>
+    <span class="badge blue" id="bb-badge">BROWSERBASE</span>
     <span class="badge purple" id="pear-badge">PEAR</span>
     <div class="status-dot">
       <span class="item" id="status-qvac"><span class="dot off"></span> QVAC</span>
+      <span class="item" id="status-bb"><span class="dot off"></span> Browserbase</span>
       <span class="item" id="status-pear"><span class="dot off"></span> Pear</span>
       <span class="item" id="status-peer"><span class="dot off"></span> Peers</span>
     </div>
@@ -104,6 +111,10 @@
     <div id="sidebar">
       <div class="panel-header">Agents <span id="agent-count">0</span></div>
       <div id="agent-list"></div>
+      <div id="bb-panel">
+        <div class="panel-header">Browserbase <span id="bb-count">0</span></div>
+        <div id="bb-results" style="padding:4px;font-size:9px;color:#6e7681;">No active investigations</div>
+      </div>
     </div>
 
     <div id="right-panel">
@@ -137,7 +148,7 @@
           <option value="qvac-sec">QVAC-Sec (security)</option>
           <option value="smollm2-360m">SmolLM2 (demo)</option>
         </select>
-        <input id="input" type="text" placeholder="Ask agents to investigate..." autocomplete="off">
+        <input id="input" type="text" placeholder="Ask agents, /investigate URL, /fetch URL, /search query" autocomplete="off">
         <button id="btn-send">Send</button>
       </div>
     </div>
@@ -168,6 +179,7 @@ let currentTab = 'audit';
 let selectedAgent = null;
 let isSending = false;
 let pearInfo = null;
+let bbAvailable = false;
 let auditEntries = [];
 let metrics = { latency: 0, requests: 0, cache: 0, tokens: 0, peers: 0 };
 
@@ -238,11 +250,13 @@ function updateMetrics(data) {
   document.getElementById('m-version').textContent = data.version || '1.0.0';
 }
 
-function updateStatus(qvacOk, pearOk, peerCount) {
+function updateStatus(qvacOk, bbOk, pearOk, peerCount) {
   const qv = document.getElementById('status-qvac');
+  const bb = document.getElementById('status-bb');
   const pe = document.getElementById('status-pear');
   const pr = document.getElementById('status-peer');
   qv.innerHTML = `<span class="dot ${qvacOk ? 'on' : 'warn'}"></span> QVAC`;
+  bb.innerHTML = `<span class="dot ${bbOk ? 'on' : 'off'}"></span> Browserbase`;
   pe.innerHTML = `<span class="dot ${pearOk ? 'on' : 'off'}"></span> Pear`;
   pr.innerHTML = `<span class="dot ${peerCount > 0 ? 'on' : 'off'}"></span> Peers`;
 }
@@ -298,9 +312,46 @@ async function loadStatus() {
       version: '1.0.0',
     });
     document.getElementById('m-peers').textContent = s.system?.agents || 0;
-    if (s.system?.qvacTestMode) updateStatus(true, true, 0);
+    if (s.system?.qvacTestMode) updateStatus(true, false, true, 0);
     s.agents?.forEach(a => agents.set(a.id, a));
     renderAgents();
+  }
+}
+
+async function loadBrowserbaseStatus() {
+  const b = await api('/api/browserbase/status');
+  if (!b.error) {
+    bbAvailable = b.available && b.configured;
+    document.getElementById('status-bb').innerHTML = `<span class="dot ${bbAvailable ? 'on' : 'off'}"></span> Browserbase`;
+    document.getElementById('bb-badge').textContent = bbAvailable ? 'BROWSERBASE' : 'BB OFFLINE';
+    document.getElementById('bb-badge').className = bbAvailable ? 'badge blue' : 'badge orange';
+  }
+}
+
+async function browserbaseInvestigate() {
+  const text = input.value.trim();
+  if (!text) return;
+  // Check for /investigate <url> command
+  const match = text.match(/^\/investigate\s+(.+)$/i);
+  if (!match) return;
+  const url = match[1];
+  input.value = '';
+  addMsg(`/investigate ${url}`, 'user');
+  addSystemMsg('Launching Browserbase agent to verify external target...');
+
+  try {
+    const res = await api('/api/browserbase/investigate', {
+      method: 'POST',
+      body: { url, task: 'Extract security headers, SOC 2 status, and any public disclosure notices' },
+    });
+    if (res.ok) {
+      addMsg(`Browserbase agent started: ${res.runId}`, 'system',
+        `<span class="provider browserbase">BROWSERBASE</span> ${res.url} · ${res.latencyMs}ms · status: ${res.status}`);
+    } else {
+      addMsg(`Browserbase unavailable: ${res.error} — all analysis remains local (QVAC)`, 'agent');
+    }
+  } catch (e) {
+    addMsg(`Investigation error: ${e.message}`, 'agent');
   }
 }
 
@@ -331,6 +382,12 @@ async function loadQvacMetrics() {
 // ── Send message ─────────────────────────────────────────
 async function sendPrompt(text) {
   if (isSending || !text.trim()) return;
+  // /investigate <url> — Browserbase verification command
+  if (text.match(/^\/investigate\s+/i)) {
+    input.value = text;
+    await browserbaseInvestigate();
+    return;
+  }
   isSending = true; sendBtn.disabled = true;
   const model = modelSelect.value;
   input.value = '';
@@ -347,7 +404,7 @@ async function sendPrompt(text) {
     });
 
     const provider = res.provider || 'unknown';
-    const providerClass = provider === 'qvac' ? 'qvac' : provider === 'openai' ? 'openai' : provider === 'deterministic' ? 'deterministic' : provider === 'qvac-cache' ? 'cache' : '';
+    const providerClass = provider === 'qvac' ? 'qvac' : provider === 'openai' ? 'openai' : provider === 'deterministic' ? 'deterministic' : provider === 'qvac-cache' ? 'cache' : provider === 'browserbase' ? 'browserbase' : '';
     const latency = res.latencyMs || res.totalLatencyMs || 0;
 
     addMsg(res.text || '(no response)', 'agent',
@@ -401,6 +458,7 @@ renderAgents();
 renderBottomPanel();
 loadStatus();
 loadPearStatus();
+loadBrowserbaseStatus();
 loadQvacMetrics();
 
 // Periodic refresh
@@ -408,11 +466,11 @@ setInterval(loadPearStatus, 10000);
 setInterval(loadQvacMetrics, 5000);
 
 // Seed initial audit entries
-addAuditEntry({ action: 'system:start', version: '1.0.0', runtime: 'pear', time: Date.now() });
-addAuditEntry({ action: 'agent:register', agentId: 'commander-01', role: 'LEAD', time: Date.now() });
-addAuditEntry({ action: 'agent:register', agentId: 'security-02', role: 'GUARD', time: Date.now() });
-addAuditEntry({ action: 'agent:register', agentId: 'network-01', role: 'RELAY', time: Date.now() });
-addAuditEntry({ action: 'agent:register', agentId: 'telemetry-03', role: 'SCAN', time: Date.now() });
+addAuditEntry({ action: 'system:start', version: '1.0.0', runtime: 'pear', browserbase: bbAvailable });
+addAuditEntry({ action: 'agent:register', agentId: 'commander-01', role: 'LEAD' });
+addAuditEntry({ action: 'agent:register', agentId: 'security-02', role: 'GUARD' });
+addAuditEntry({ action: 'agent:register', agentId: 'network-01', role: 'RELAY' });
+addAuditEntry({ action: 'agent:register', agentId: 'telemetry-03', role: 'SCAN' });
 input.focus();
 </script>
 </body>

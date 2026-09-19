@@ -20,6 +20,11 @@ export const TOOL_SCHEMAS = [
   { name: 'a2a_get_messages', description: 'Retrieve A2A messages for an agent.', parameters: { type: 'object', properties: { agent: { type: 'string' }, limit: { type: 'number', default: 50 } }, required: ['agent'] } },
   { name: 'a2a_broadcast', description: 'Broadcast a message to all agents in a conversation.', parameters: { type: 'object', properties: { from: { type: 'string' }, content: { type: 'string' }, type: { type: 'string', default: 'announcement' } }, required: ['from', 'content'] } },
   { name: 'run_jiuwen', description: 'Dispatch a query to JiuwenSwarm/WorkSwarm for multi-agent decomposition.', parameters: { type: 'object', properties: { query: { type: 'string' }, context_id: { type: 'string' } }, required: ['query'] } },
+
+  // Browserbase tools — external threat intel verification (cloud, optional)
+  { name: 'browserbase_search_intel', description: 'Search the web via Browserbase Search API for threat intel, CVEs, security advisories, vendor documentation, and SOC 2 trust centers. Returns structured results with URLs. Use when agents need external verification or public security data.', parameters: { type: 'object', properties: { query: { type: 'string', description: 'Search query (e.g. "CVE-2024-XXXX impact Cloudflare")' }, numResults: { type: 'number', description: 'Number of results (1-25, default 5)' } }, required: ['query'] } },
+  { name: 'browserbase_verify_web_target', description: 'Use Browserbase cloud browser (with CAPTCHA solving and verified mode) to navigate, inspect, and extract data from anti-bot protected security pages like vendor trust centers, SOC 2 dashboards, and CVE databases. Runs autonomous browser agent in plain English.', parameters: { type: 'object', properties: { url: { type: 'string', description: 'URL to investigate or inspect' }, task: { type: 'string', description: 'Action for the browser agent to perform on the page (e.g. "Extract SOC 2 status and check for public disclosure notices")' }, solveCaptchas: { type: 'boolean', description: 'Enable CAPTCHA solving (default true)' }, verified: { type: 'boolean', description: 'Use verified browser mode (default true)' } }, required: ['url', 'task'] } },
+  { name: 'browserbase_fetch_page', description: 'Fetch any page content reliably via Browserbase Fetch API — bypasses rate limits, anti-bot blocks, and CAPTCHAs without a browser session. Use for static pages, APIs, and sitemaps that do not need JavaScript rendering.', parameters: { type: 'object', properties: { url: { type: 'string', description: 'URL to fetch' }, allowRedirects: { type: 'boolean', description: 'Follow redirects (default true)' }, proxies: { type: 'boolean', description: 'Enable proxy support (default false)' } }, required: ['url'] } },
 ];
 
 // Execute a tool call — these are called by the orchestrator agent during its reasoning loop.
@@ -237,6 +242,89 @@ export async function executeTool(toolName, args, env) {
         return { ok: true, mode: result.mode, text: result.text?.slice(0, 2000) || 'No text returned', raw: result.raw };
       } catch (e) {
         return { ok: false, mode: 'ERROR', error: e.message };
+      }
+    }
+
+    // ── Browserbase Tools (cloud, optional) ──────────────────
+    case 'browserbase_search_intel': {
+      const bbApiKey = process.env.BROWSERBASE_API_KEY;
+      if (!bbApiKey) return { ok: false, error: 'BROWSERBASE_API_KEY not set', mode: 'SIMULATED' };
+      const { query, numResults = 5 } = args;
+      try {
+        const res = await fetch('https://api.browserbase.com/v1/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-BB-API-Key': bbApiKey,
+          },
+          body: JSON.stringify({ query, numResults }),
+          signal: AbortSignal.timeout(30000),
+        });
+        if (!res.ok) return { ok: false, error: `Browserbase search ${res.status}`, mode: 'BROWSERBASE' };
+        const data = await res.json();
+        console.log(`[Browserbase] Search: "${query}" → ${data.results?.length || 0} results`);
+        return { ok: true, mode: 'BROWSERBASE', query, results: data.results || [], requestId: data.requestId };
+      } catch (e) {
+        return { ok: false, error: e.message, mode: 'BROWSERBASE' };
+      }
+    }
+
+    case 'browserbase_verify_web_target': {
+      const bbApiKey = process.env.BROWSERBASE_API_KEY;
+      if (!bbApiKey) return { ok: false, error: 'BROWSERBASE_API_KEY not set', mode: 'SIMULATED' };
+      const { url, task, solveCaptchas = true, verified = true } = args;
+      try {
+        const res = await fetch('https://api.browserbase.com/v1/agents/runs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-BB-API-Key': bbApiKey,
+          },
+          body: JSON.stringify({
+            task: `Navigate to ${url}. ${task}`,
+            browserSettings: { solveCaptchas, verified },
+            resultSchema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string' },
+                findings: { type: 'array', items: { type: 'string' } },
+                threats: { type: 'array', items: { type: 'string' } },
+                soc2Status: { type: 'string' },
+                disclosures: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          }),
+          signal: AbortSignal.timeout(120000),
+        });
+        if (!res.ok) return { ok: false, error: `Browserbase agent ${res.status}`, mode: 'BROWSERBASE', runId: null };
+        const data = await res.json();
+        console.log(`[Browserbase] Verify: ${url} → runId: ${data.runId}, status: ${data.status}`);
+        return { ok: true, mode: 'BROWSERBASE', runId: data.runId, status: data.status, task: data.task };
+      } catch (e) {
+        return { ok: false, error: e.message, mode: 'BROWSERBASE' };
+      }
+    }
+
+    case 'browserbase_fetch_page': {
+      const bbApiKey = process.env.BROWSERBASE_API_KEY;
+      if (!bbApiKey) return { ok: false, error: 'BROWSERBASE_API_KEY not set', mode: 'SIMULATED' };
+      const { url, allowRedirects = true, proxies = false } = args;
+      try {
+        const res = await fetch('https://api.browserbase.com/v1/fetch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-BB-API-Key': bbApiKey,
+          },
+          body: JSON.stringify({ url, allowRedirects, proxies }),
+          signal: AbortSignal.timeout(30000),
+        });
+        if (!res.ok) return { ok: false, error: `Browserbase fetch ${res.status}`, mode: 'BROWSERBASE' };
+        const data = await res.json();
+        console.log(`[Browserbase] Fetch: ${url} → ${data.statusCode}, ${data.content?.length || 0} bytes`);
+        return { ok: true, mode: 'BROWSERBASE', url, statusCode: data.statusCode, contentType: data.contentType, content: (data.content || '').slice(0, 5000) };
+      } catch (e) {
+        return { ok: false, error: e.message, mode: 'BROWSERBASE' };
       }
     }
 

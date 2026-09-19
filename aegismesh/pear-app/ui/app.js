@@ -16,6 +16,7 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
   // ── Import QVAC & Pear integration ─────────────────
   let infer, inferForAgent, qvacModels, qvacRoleModels, qvacMetrics, qvacCache;
   let pearPeers, pearOTA, pearDistributor, pearLifecycle, isPearRuntimeFlag;
+  let bbApiKey, bbAvailable;
   try {
     const qvac = await import('../workers/qvac.js');
     infer = qvac.infer;
@@ -33,6 +34,8 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
     pearLifecycle = pear.lifecycle;
     isPearRuntimeFlag = pear.isPearRuntime ? pear.isPearRuntime() : false;
   } catch (e) { console.warn('[Pear] import failed:', e.message); }
+  bbApiKey = process.env.BROWSERBASE_API_KEY || '';
+  bbAvailable = !!bbApiKey;
 
   // ── Helpers ────────────────────────────────────────
   function logAudit(entry) {
@@ -66,9 +69,111 @@ export default async function start({ port = 8000, host = '0.0.0.0', root } = {}
         a2a: 'active',
         qvac: !!infer,
         pear: !!pearPeers,
+        browserbase: bbAvailable,
         version: '1.0.0',
         uptime: Date.now() - state.startedAt,
       });
+      return;
+    }
+
+    // ═══ BROWSERBASE STATUS ═══
+    if (pathname === '/api/browserbase/status') {
+      json(res, 200, {
+        available: bbAvailable,
+        configured: !!bbApiKey,
+        keyPreview: bbApiKey ? bbApiKey.slice(0, 4) + '...' : 'not-set',
+        mode: bbAvailable ? 'BROWSERBASE' : 'LOCAL-ONLY',
+      });
+      return;
+    }
+
+    // ═══ BROWSERBASE INVESTIGATION ═══
+    if (pathname === '/api/browserbase/investigate' && req.method === 'POST') {
+      const body = JSON.parse(await getBody(req));
+      if (!bbAvailable) {
+        json(res, 503, { error: 'Browserbase not configured', mode: 'LOCAL-ONLY' });
+        return;
+      }
+      const { url, task } = body;
+      if (!url || !task) { json(res, 400, { error: 'url and task required' }); return; }
+
+      const startTime = Date.now();
+      try {
+        const bbRes = await fetch('https://api.browserbase.com/v1/agents/runs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-BB-API-Key': bbApiKey,
+          },
+          body: JSON.stringify({
+            task: `Navigate to ${url}. ${task}`,
+            browserSettings: { solveCaptchas: true, verified: true },
+            resultSchema: {
+              type: 'object',
+              properties: {
+                status: { type: 'string' },
+                findings: { type: 'array', items: { type: 'string' } },
+                threats: { type: 'array', items: { type: 'string' } },
+                soc2Status: { type: 'string' },
+                disclosures: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          }),
+          signal: AbortSignal.timeout(120000),
+        });
+        const data = await bbRes.json();
+        const elapsed = Date.now() - startTime;
+        const result = {
+          ok: bbRes.ok,
+          mode: 'BROWSERBASE',
+          url,
+          task,
+          runId: data.runId,
+          status: data.status,
+          latencyMs: elapsed,
+        };
+        console.log(`[Browserbase] Investigate: ${url} → ${data.status}`);
+        state.totalRequests++;
+        json(res, 200, result);
+      } catch (e) {
+        json(res, 400, { error: e.message });
+      }
+      return;
+    }
+
+    // ═══ BROWSERBASE FETCH ═══
+    if (pathname === '/api/browserbase/fetch' && req.method === 'POST') {
+      const body = JSON.parse(await getBody(req));
+      if (!bbAvailable) {
+        json(res, 503, { error: 'Browserbase not configured', mode: 'LOCAL-ONLY' });
+        return;
+      }
+      const { url, allowRedirects = true, proxies = false } = body;
+      if (!url) { json(res, 400, { error: 'url required' }); return; }
+
+      try {
+        const bbRes = await fetch('https://api.browserbase.com/v1/fetch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-BB-API-Key': bbApiKey,
+          },
+          body: JSON.stringify({ url, allowRedirects, proxies }),
+          signal: AbortSignal.timeout(30000),
+        });
+        const data = await bbRes.json();
+        console.log(`[Browserbase] Fetch: ${url} → ${data.statusCode}`);
+        json(res, 200, {
+          ok: bbRes.ok,
+          mode: 'BROWSERBASE',
+          url,
+          statusCode: data.statusCode,
+          contentType: data.contentType,
+          content: (data.content || '').slice(0, 5000),
+        });
+      } catch (e) {
+        json(res, 400, { error: e.message });
+      }
       return;
     }
 

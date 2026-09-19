@@ -47,7 +47,15 @@ pear run pear://<aegismesh-key>
 - Send the same query again → `provider: "qvac-cache"` — zero-latency hit
 - **Key point:** No API keys. No cloud. Every inference runs on-device.
 
-### 2. Agent-Aware Model Selection (~3 min)
+### 2. Browserbase — External Threat Intel (~3 min)
+- Type `/investigate https://www.cisa.gov/catalog` in the input and press Enter
+- Observe: **BROWSERBASE badge** turns blue when configured, stays orange when offline
+- Browserbase launches autonomous browser agent: navigates, extracts security advisories, bypasses anti-bot/CAPTCHA if needed
+- Without `BROWSERBASE_API_KEY`: browserbase badge stays orange, all analysis remains LOCAL-ONLY (QVAC only)
+- Demo honesty: badge accurately reflects whether Browserbase is truly active or in fallback mode
+- **Key point:** External verification on-demand. No persistent cloud dependency — activates only when needed.
+
+### 3. Agent-Aware Model Selection (~3 min)
 - Register multiple agents with different roles (LEAD, GUARD, SCAN, RELAY)
 - Each agent auto-selects the optimal QVAC model for its task:
   - LEAD → QVAC-3B (multi-step reasoning)
@@ -57,20 +65,20 @@ pear run pear://<aegismesh-key>
 - Send the same prompt to different agents → different models, different responses
 - **Key point:** Sophisticated model routing, not one-model-fits-all
 
-### 3. Inference Cache (~2 min)
+### 4. Inference Cache (~2 min)
 - Send a query, note the latency in the meta line
 - Send the exact same query again → observe `CACHED` tag and 0ms latency
 - Metrics bar shows cache size growing
 - **Key point:** Deduplication saves compute and improves UX
 
-### 4. Multi-Agent Workflow (~5 min)
+### 5. Multi-Agent Workflow (~5 min)
 - Each agent runs in its own worker thread (isolation)
 - Agents can be created, terminated, and monitored individually
 - Send a complex multi-step query → LEAD agent decomposes and delegates
 - Watch agent-to-agent dispatch via `/api/dispatch`
 - **Key point:** Compromised agent can't affect others (thread isolation)
 
-### 5. Pear P2P Distribution (~5 min)
+### 6. Pear P2P Distribution (~5 min)
 ```bash
 # Show Pear runtime info
 pear info aegismesh-sovereign
@@ -84,8 +92,9 @@ pear install ./aegismesh-sovereign-1.0.0.tar.gz
 - Dashboard shows: Peer ID, connected peers, network capabilities
 - In production, Hyperswarm auto-discovers peers
 - **Key point:** Deploy to isolated networks without internet
+- **Key point 2:** Browserbase can also run from any Pear instance — extend verification across P2P network
 
-### 6. OTA Updates (~3 min)
+### 7. OTA Updates (~3 min)
 ```bash
 # Check for updates
 pear upgrade
@@ -97,14 +106,14 @@ curl http://localhost:8000/api/ota/status
 - OTA updates pull new agent logic without reinstalling
 - **Key point:** Security patches deploy instantly across all peers
 
-### 7. Security Scenarios (~5 min)
+### 8. Security Scenarios (~5 min)
 - **False alarm:** Send "Check CPU usage" → SCAN agent with QVAC-Sec → nominal verdict
 - **Real breach:** Send "Detect unauthorized access" → GUARD agent → threat detected
 - **Cache demo:** Repeat a query → observe CACHED response
 - **Audit trail:** Check bottom panel → every action logged with timestamp
 - **Key point:** Every decision is local, logged, and auditable
 
-### 8. Build & Ship (~4 min)
+### 9. Build & Ship (~4 min)
 ```bash
 # Cross-platform build
 npm run make:linux-x64
@@ -115,7 +124,7 @@ npm run make:win32-x64
 - On macOS: `codesign --force --deep --sign - aegismesh-darwin-arm64`
 - **Key point:** Same code, every platform, signed binaries
 
-### 9. Closing (~3 min)
+### 10. Closing (~3 min)
 - Show metrics bar: real QVAC latency, cache hits, requests served
 - Show Pear network: peers, capabilities, OTA status
 - Show audit log: every decision with timestamps and providers
@@ -128,7 +137,13 @@ npm run make:win32-x64
 User Query
     │
     ▼
-QVAC Model Selector (role-aware)
+[Browserbase?] ← Triggered by /investigate URL command
+    │           (only when BROWSERBASE_API_KEY set)
+    ▼
+Browserbase Agent Run ← Navigate, extract, bypass anti-bot
+    │
+    ▼
+QVAC Model Selector (role-aware) ← All local AI inference
     │
     ├── Cache Check (SHA-256 dedup, 5min TTL) ──→ Cache HIT (0ms)
     │
@@ -144,7 +159,10 @@ Agent Thread (isolated worker)
     └── Pear P2P status updated
     │
     ▼
-Dashboard (real-time metrics + chat)
+Dashboard (real-time metrics, badges, audit)
+    ├── QVAC badge (green=active, yellow=fallback)
+    ├── BROWSERBASE badge (blue=configured, orange=offline)
+    └── PEAR badge (purple=P2P ready)
 ```
 
 ## Key Differentiators vs Cloud AI

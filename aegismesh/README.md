@@ -139,6 +139,25 @@ pear run pear://<aegismesh-key>
 
 Agents run in sandboxed Bare worklets with P2P Hyperswarm networking and self-updates via Pear OTA. **All AI inference is local via QVAC**.
 
+### Browserbase — External Threat Intel (cloud, optional)
+
+When agents detect suspicious domains, CVEs, or zero-day exploits, Browserbase provides live browser automation to verify external sources behind anti-bot walls, CAPTCHAs, and Cloudflare protection.
+
+```bash
+cd aegismesh
+npm install @browserbasehq/sdk
+export BROWSERBASE_API_KEY="your_key"
+
+# Run standalone investigation
+node scripts/browserbase-investigate.js
+```
+
+Integrates via `cloudflare/agent-tools.mjs`:
+- `browserbase_search_intel` — Web search for CVEs, advisories, vendor docs
+- `browserbase_verify_web_target` — Navigate trust centers, SOC 2 dashboards
+
+Wired into `cloudflare/agent-orchestrator.mjs` — verifier-01 and network-01 agents auto-dispatch Browserbase for external incidents. Requires `BROWSERBASE_API_KEY`. Without it, all agent analysis remains local (QVAC only).
+
 ---
 
 ## Agent Fleet

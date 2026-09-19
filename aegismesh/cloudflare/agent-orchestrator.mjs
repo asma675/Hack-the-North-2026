@@ -25,6 +25,13 @@ YOUR TOOLS:
 - list_skills, find_skills_for_task — discover what agents can do
 - a2a_send, a2a_get_messages, a2a_broadcast — direct agent-to-agent communication
 - run_jiuwen — dispatch to JiuwenSwarm/WorkSwarm for complex decomposition
+- browserbase_search_intel, browserbase_fetch_page, browserbase_verify_web_target — external web verification (BROWSERBASE_API_KEY required)
+
+EXTERNAL VERIFICATION RULE: When incidents involve suspicious domains, CVEs, vendor trust centers, or zero-day exploits:
+1. FIRST dispatch browserbase_search_intel to find public intel and related CVEs
+2. THEN dispatch browserbase_fetch_page to retrieve page content reliably
+3. THEN dispatch browserbase_verify_web_target to inspect behind anti-bot walls
+4. THEN local agents synthesize all evidence
 
 REASONING RULES:
 1. Always list_agents first to understand availability
@@ -120,14 +127,24 @@ REASONING RULES:
     const msg = userMessage.toLowerCase();
     const plan = [];
     const skillAgents = new Set(matchedSkills.map(s => s.agent));
+    const needsBrowserbase = msg.includes('http') || msg.includes('url') || msg.includes('domain') ||
+      msg.includes('cve') || msg.includes('soc 2') || msg.includes('trust center') ||
+      msg.includes('vendor') || msg.includes('patch') || msg.includes('advisory') ||
+      msg.includes('zero-day') || msg.includes('website') || msg.includes('web') ||
+      msg.includes('fetch') || msg.includes('search') || msg.includes('investigate');
 
     if (msg.includes('investigate') || msg.includes('incident') || msg.includes('breach') || msg.includes('attack')) {
-      plan.push({ agent_key: 'commander-01', description: 'Coordinate investigation of the incident — assess scope, assign roles, and establish investigation framework', priority: 'CRITICAL' });
-      plan.push({ agent_key: 'telemetry-03', description: 'Scan system telemetry for anomalies — CPU spikes, memory pressure, unexpected processes', priority: 'HIGH' });
-      plan.push({ agent_key: 'security-02', description: 'Run security assessment — check for unauthorized access, threat indicators', priority: 'HIGH' });
-      plan.push({ agent_key: 'network-01', description: 'Analyze network activity — identify unusual connections, data exfiltration attempts', priority: 'HIGH' });
-      plan.push({ agent_key: 'skeptic-01', description: 'Challenge all findings — identify assumptions and gaps in evidence', priority: 'MEDIUM' });
-      plan.push({ agent_key: 'verifier-01', description: 'Adjudicate evidence and provide verdict with confidence score and recommended remediation', priority: 'HIGH' });
+      plan.push({ agent_key: 'commander-01', description: 'Coordinate investigation — assess scope, assign roles, establish framework', priority: 'CRITICAL' });
+      plan.push({ agent_key: 'telemetry-03', description: 'Scan system telemetry for anomalies', priority: 'HIGH' });
+      plan.push({ agent_key: 'security-02', description: 'Run security assessment — check for unauthorized access', priority: 'HIGH' });
+      plan.push({ agent_key: 'network-01', description: 'Analyze network activity — unusual connections, exfiltration', priority: 'HIGH' });
+      if (needsBrowserbase) {
+        plan.push({ agent_key: 'verifier-01', description: 'BROWSERBASE: Search web for threat intel and related CVEs', priority: 'HIGH' });
+        plan.push({ agent_key: 'verifier-01', description: 'BROWSERBASE: Fetch reliable page content from suspicious targets', priority: 'HIGH' });
+        plan.push({ agent_key: 'verifier-01', description: 'BROWSERBASE: Verify external vendor/security pages behind anti-bot', priority: 'HIGH' });
+      }
+      plan.push({ agent_key: 'skeptic-01', description: 'Challenge all findings — identify assumptions and gaps', priority: 'MEDIUM' });
+      plan.push({ agent_key: 'verifier-01', description: 'Adjudicate evidence — verdict with confidence and remediation', priority: 'HIGH' });
     } else if (msg.includes('monitor') || msg.includes('watch') || msg.includes('status')) {
       plan.push({ agent_key: 'telemetry-03', description: 'Provide current system health monitoring snapshot', priority: 'MEDIUM' });
       plan.push({ agent_key: 'security-02', description: 'Check security posture and active threats', priority: 'MEDIUM' });
