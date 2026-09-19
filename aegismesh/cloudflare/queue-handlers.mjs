@@ -1,5 +1,4 @@
 // Cloudflare Queue consumer — processes background agent tasks asynchronously.
-// Queued by worker-entry.mjs for: AI verification, event processing, scenario execution, agent tasks.
 export default {
   async queue(message, env, ctx) {
     const body = message.body;
@@ -7,16 +6,13 @@ export default {
 
     try {
       switch (taskType) {
-        case 'ai-verify':
-          return await this.processAIVerify(body, env, ctx);
-        case 'event-process':
-          return await this.processEvent(body, env, ctx);
-        case 'scenario-run':
-          return await this.processScenario(body, env, ctx);
-        case 'gate-check':
-          return await this.processGateCheck(body, env, ctx);
-        case 'agent-task':
-          return await this.processAgentTask(body, env, ctx);
+        case 'ai-verify': return await this.processAIVerify(body, env, ctx);
+        case 'event-process': return await this.processEvent(body, env, ctx);
+        case 'scenario-run': return await this.processScenario(body, env, ctx);
+        case 'gate-check': return await this.processGateCheck(body, env, ctx);
+        case 'agent-task': return await this.processAgentTask(body, env, ctx);
+        case 'a2a-message': return await this.processA2AMessage(body, env, ctx);
+        case 'skill-register': return await this.processSkillRegistration(body, env, ctx);
         default:
           console.warn('[Queue] Unknown task type:', taskType);
           return new Response(JSON.stringify({ error: 'unknown task type' }), { status: 400, headers: { 'content-type': 'application/json' } });
@@ -112,7 +108,6 @@ export default {
   async processAgentTask(body, env, ctx) {
     const { taskId, agentKey, task, priority } = body;
     console.log(`[Queue] Agent task ${taskId}: ${task?.slice(0, 60)}`);
-    // Process the agent task — simulate work then mark complete
     await new Promise(r => setTimeout(r, 200));
     if (env.AEGIS_KV) {
       await env.AEGIS_KV.put(`task:${taskId}`, JSON.stringify({
@@ -132,5 +127,41 @@ export default {
       } catch {}
     }
     return new Response(JSON.stringify({ ok: true, taskId, status: 'COMPLETED' }), { headers: { 'content-type': 'application/json' } });
+  },
+
+  async processA2AMessage(body, env, ctx) {
+    const { from, to, content, type: msgType = 'text' } = body;
+    const convId = `conv:${[from, to].sort().join('+')}`;
+    if (env.AEGIS_AGENT_DO) {
+      try {
+        const conv = env.AEGIS_AGENT_DO.get(convId);
+        const res = await conv.fetch(new Request('https://internal/sendMessage?action=sendMessage', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ from, to, content, type: msgType }),
+        }));
+        return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'content-type': 'application/json' } });
+      }
+    }
+    return new Response(JSON.stringify({ ok: false, error: 'No DO binding' }), { status: 503, headers: { 'content-type': 'application/json' } });
+  },
+
+  async processSkillRegistration(body, env, ctx) {
+    const { skill } = body;
+    if (!skill) return new Response(JSON.stringify({ ok: false, error: 'Missing skill' }), { status: 400, headers: { 'content-type': 'application/json' } });
+    if (env.AEGIS_KV) {
+      try {
+        const raw = await env.AEGIS_KV.get('skills:registry') || '[]';
+        const skills = JSON.parse(raw);
+        if (!skill.id) skill.id = `skill-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        skills.push(skill);
+        await env.AEGIS_KV.put('skills:registry', JSON.stringify(skills));
+        return new Response(JSON.stringify({ ok: true, skill }), { headers: { 'content-type': 'application/json' } });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'content-type': 'application/json' } });
+      }
+    }
+    return new Response(JSON.stringify({ ok: false, error: 'No KV binding' }), { status: 503, headers: { 'content-type': 'application/json' } });
   },
 };

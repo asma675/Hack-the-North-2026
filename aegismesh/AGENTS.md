@@ -14,7 +14,7 @@ Keep the separation explicit:
 - `src/api/base44Client.js` — compatibility facade only. The name is retained so original generated screens do not need a risky rewrite; it now calls our own `/api/*` routes.
 - `server/` — Node backend (local dev fallback; uses server/store.mjs which auto-detects CF Workers env via setCFEnv).
 - `api/` — Vercel serverless entrypoint.
-- `cloudflare/` — Cloudflare Workers runtime (primary for hackathon deployment). Includes main Worker (worker-entry.mjs), Aegis Gate (worker.js), Autonomous Agent (agent-orchestrator.mjs, agent-tools.mjs), Durable Objects (do-agents.mjs), KV persistence (kv-store.mjs), Queue handlers (queue-handlers.mjs). The orchestrator agent autonomously decomposes goals, dispatches tasks to the agent fleet, monitors progress, and synthesizes findings.
+- `cloudflare/` — Cloudflare Workers runtime (primary for hackathon deployment). Includes main Worker (worker-entry.mjs), Aegis Gate (worker.js), Autonomous Agent (agent-orchestrator.mjs, agent-tools.mjs), A2A Protocol (a2a-protocol.mjs), Skill Registry (skill-registry.mjs), Durable Objects (do-agents.mjs), KV persistence (kv-store.mjs), Queue handlers (queue-handlers.mjs). The orchestrator agent autonomously decomposes goals, dispatches tasks to the agent fleet, monitors progress, and synthesizes findings. Agents communicate directly via A2A protocol and discover capabilities via the skill registry.
 - `edge/` — Raspberry Pi enforcement service.
 
 ## Product responsibilities

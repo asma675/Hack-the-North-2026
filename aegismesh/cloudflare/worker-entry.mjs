@@ -1,6 +1,6 @@
 import { handleApi } from '../server/app.mjs';
 import { setCFEnv } from './kv-store.mjs';
-import { AegisOrchestrator, runAgent } from './agent-orchestrator.mjs';
+import { AegisOrchestrator, runAgent, streamAgent } from './agent-orchestrator.mjs';
 
 export default {
   async fetch(request, env, ctx) {
@@ -24,7 +24,6 @@ export default {
       return new Response(JSON.stringify({ ok: true, queued: false, reason: 'no queue binding' }), { headers: { 'content-type': 'application/json' } });
     }
 
-    // Autonomous agent endpoint — the "brain"
     if (url.pathname === '/api/agent/run' && request.method === 'POST') {
       return new Promise(async (resolve) => {
         try {
@@ -40,20 +39,14 @@ export default {
               flush(controller) { controller.close(); },
             });
             const writer = stream.writable.getWriter();
-
             (async () => {
               for await (const chunk of orchestrator.run(message, { signal: AbortSignal.timeout(120000) })) {
                 await writer.write(chunk);
               }
               await writer.close();
             })();
-
             return new Response(stream.readable, {
-              headers: {
-                'content-type': 'text/event-stream',
-                'cache-control': 'no-cache',
-                'connection': 'keep-alive',
-              },
+              headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', 'connection': 'keep-alive' },
             });
           }
 
@@ -64,6 +57,48 @@ export default {
           console.error('[Agent]', err);
           resolve(new Response(JSON.stringify({ error: err.message, steps: [] }), { status: 500, headers: { 'content-type': 'application/json' } }));
         }
+      });
+    }
+
+    // A2A protocol endpoint — direct agent-to-agent messaging
+    if (url.pathname.match(/^\/api\/a2a\/.*/) && request.method === 'POST') {
+      const m = url.pathname.match(/^\/api\/a2a\/(.+)$/);
+      if (m && env.AEGIS_AGENT_DO) {
+        const convId = `conv:${m[1]}`;
+        const conv = env.AEGIS_AGENT_DO.get(convId);
+        const doRes = await conv.fetch(new Request(`https://internal/sendMessage?action=sendMessage`, {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: request.body,
+        }));
+        const text = await doRes.text();
+        return new Response(text, { status: doRes.status, headers: { 'content-type': 'application/json' } });
+      }
+      if (m && env.AEGIS_GATE_DO) {
+        const gate = env.AEGIS_GATE_DO.get(m[1]);
+        const doRes = await gate.fetch(request);
+        const text = await doRes.text();
+        return new Response(text, { status: doRes.status, headers: { 'content-type': 'application/json' } });
+      }
+    }
+
+    if (url.pathname === '/api/agent/stream' && request.method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      const message = body.message || body.goal || 'Investigate';
+      const orchestrator = new AegisOrchestrator(env);
+      return new Response(new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of orchestrator.run(message, { signal: AbortSignal.timeout(120000) })) {
+              controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
+            }
+            controller.close();
+          } catch (err) {
+            controller.enqueue(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+            controller.close();
+          }
+        },
+        cancel() {},
+      }), {
+        headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', 'connection': 'keep-alive' },
       });
     }
 

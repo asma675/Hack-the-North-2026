@@ -1,94 +1,25 @@
 // Tool definitions for the AegisMesh autonomous orchestrator agent.
 // Each tool has a schema compatible with @cloudflare/agents tool-calling protocol.
 
+import { loadSkills, searchSkills, matchSkills } from './skill-registry.mjs';
+import { getConversationId } from './a2a-protocol.mjs';
+import { loadState } from './kv-store.mjs';
+
 export const TOOL_SCHEMAS = [
-  {
-    name: 'list_agents',
-    description: 'List all available agents in the fleet with their roles, status, trust scores, and capabilities. Use this when you need to know who is available for a task.',
-    parameters: {
-      type: 'object',
-      properties: {},
-      required: [],
-    },
-  },
-  {
-    name: 'query_agent',
-    description: 'Get detailed status, capabilities, trust score, and recent activity of a specific agent. Pass the agent_key (e.g. "security-02").',
-    parameters: {
-      type: 'object',
-      properties: {
-        agent_key: { type: 'string', description: 'The agent identifier, e.g. security-02' },
-      },
-      required: ['agent_key'],
-    },
-  },
-  {
-    name: 'dispatch_task',
-    description: 'Assign a task to a specific agent by agent_key. The agent will process the task asynchronously via Queue. Returns a task_id for monitoring.',
-    parameters: {
-      type: 'object',
-      properties: {
-        agent_key: { type: 'string', description: 'The agent identifier to assign the task to' },
-        task: { type: 'string', description: 'The task description/instruction for the agent' },
-        priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], description: 'Task priority level' },
-      },
-      required: ['agent_key', 'task'],
-    },
-  },
-  {
-    name: 'get_task_status',
-    description: 'Check the status and result of a dispatched task using its task_id.',
-    parameters: {
-      type: 'object',
-      properties: {
-        task_id: { type: 'string', description: 'The task ID returned by dispatch_task' },
-      },
-      required: ['task_id'],
-    },
-  },
-  {
-    name: 'get_system_health',
-    description: 'Check the health status of all AegisMesh services (API, AI providers, edge, integrations).',
-    parameters: {
-      type: 'object',
-      properties: {},
-      required: [],
-    },
-  },
-  {
-    name: 'get_incident',
-    description: 'Get details about a specific incident including severity, state, affected assets, and current investigation status.',
-    parameters: {
-      type: 'object',
-      properties: {
-        incident_id: { type: 'string', description: 'The incident identifier' },
-      },
-      required: ['incident_id'],
-    },
-  },
-  {
-    name: 'synthesize_findings',
-    description: 'Combine findings from multiple agents into a comprehensive analysis with a verdict, recommendation, and confidence score. Use this when you have gathered enough information to deliver a final answer.',
-    parameters: {
-      type: 'object',
-      properties: {
-        agent_ids: { type: 'array', items: { type: 'string' }, description: 'List of agent IDs whose findings to synthesize' },
-        question: { type: 'string', description: 'The question or goal being investigated' },
-      },
-      required: ['agent_ids', 'question'],
-    },
-  },
-  {
-    name: 'run_scenario',
-    description: 'Execute a predefined scenario (BREACH or FALSE_ALARM) which triggers the full multi-agent investigation workflow.',
-    parameters: {
-      type: 'object',
-      properties: {
-        scenario: { type: 'string', enum: ['BREACH', 'FALSE_ALARM'], description: 'The scenario to run' },
-      },
-      required: ['scenario'],
-    },
-  },
+  { name: 'list_agents', description: 'List all available agents in the fleet with their roles, status, trust scores, and capabilities.', parameters: { type: 'object', properties: {}, required: [] } },
+  { name: 'query_agent', description: 'Get detailed status, capabilities, trust score, and recent activity of a specific agent. Pass the agent_key (e.g. "security-02").', parameters: { type: 'object', properties: { agent_key: { type: 'string', description: 'The agent identifier, e.g. security-02' } }, required: ['agent_key'] } },
+  { name: 'dispatch_task', description: 'Assign a task to a specific agent by agent_key. Returns a task_id for monitoring.', parameters: { type: 'object', properties: { agent_key: { type: 'string' }, task: { type: 'string' }, priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] } }, required: ['agent_key', 'task'] } },
+  { name: 'get_task_status', description: 'Check the status and result of a dispatched task.', parameters: { type: 'object', properties: { task_id: { type: 'string' } }, required: ['task_id'] } },
+  { name: 'get_system_health', description: 'Check health status of all AegisMesh services.', parameters: { type: 'object', properties: {}, required: [] } },
+  { name: 'get_incident', description: 'Get incident details.', parameters: { type: 'object', properties: { incident_id: { type: 'string' } }, required: ['incident_id'] } },
+  { name: 'synthesize_findings', description: 'Combine findings from multiple agents into a comprehensive analysis.', parameters: { type: 'object', properties: { agent_ids: { type: 'array', items: { type: 'string' } }, question: { type: 'string' } }, required: ['agent_ids', 'question'] } },
+  { name: 'run_scenario', description: 'Execute a predefined BREACH or FALSE_ALARM scenario.', parameters: { type: 'object', properties: { scenario: { type: 'string', enum: ['BREACH', 'FALSE_ALARM'] } }, required: ['scenario'] } },
+  { name: 'list_skills', description: 'List all available skills. Use to understand what agents can do.', parameters: { type: 'object', properties: { agent_id: { type: 'string' }, category: { type: 'string' }, query: { type: 'string' } }, required: [] } },
+  { name: 'find_skills_for_task', description: 'Find skills relevant to a task description. Use when planning how to accomplish a goal.', parameters: { type: 'object', properties: { task_description: { type: 'string' } }, required: ['task_description'] } },
+  { name: 'a2a_send', description: 'Send a message directly to another agent via A2A protocol. Use for agent-to-agent collaboration.', parameters: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, content: { type: 'string' }, type: { type: 'string', enum: ['text', 'request', 'response', 'announcement'] } }, required: ['from', 'to', 'content'] } },
+  { name: 'a2a_get_messages', description: 'Retrieve A2A messages for an agent.', parameters: { type: 'object', properties: { agent: { type: 'string' }, limit: { type: 'number', default: 50 } }, required: ['agent'] } },
+  { name: 'a2a_broadcast', description: 'Broadcast a message to all agents in a conversation.', parameters: { type: 'object', properties: { from: { type: 'string' }, content: { type: 'string' }, type: { type: 'string', default: 'announcement' } }, required: ['from', 'content'] } },
+  { name: 'run_jiuwen', description: 'Dispatch a query to JiuwenSwarm/WorkSwarm for multi-agent decomposition.', parameters: { type: 'object', properties: { query: { type: 'string' }, context_id: { type: 'string' } }, required: ['query'] } },
 ];
 
 // Execute a tool call — these are called by the orchestrator agent during its reasoning loop.
@@ -224,12 +155,92 @@ export async function executeTool(toolName, args, env) {
       return { scenario, status: 'RUNNING', activeAgents: state.entities?.GovernedAgent?.length || 0 };
     }
 
+    case 'list_skills': {
+      const { agent_id, category, query: q } = args;
+      let skills = await loadSkills(env.AEGIS_KV);
+      if (agent_id) skills = skills.filter(s => s.agent === agent_id);
+      if (category) skills = skills.filter(s => s.category === category);
+      if (q) skills = await searchSkills(env.AEGIS_KV, q);
+      return { skills, count: skills.length };
+    }
+
+    case 'find_skills_for_task': {
+      const matches = await matchSkills(env.AEGIS_KV, args.task_description);
+      return { matched: matches, suggestion: matches.length > 0 ? `Use ${matches.map(m => m.name).join(', ')} for this task` : 'No matching skills found — consider dispatching to a generalist agent' };
+    }
+
+    case 'a2a_send': {
+      const { from, to, content, type: msgType = 'text' } = args;
+      const convId = getConversationId(from, to);
+      if (env.AEGIS_AGENT_DO) {
+        try {
+          const conv = env.AEGIS_AGENT_DO.get(convId);
+          const res = await conv.fetch(new Request('https://internal/sendMessage?action=sendMessage', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ from, to, content, type: msgType }),
+          }));
+          return await res.json();
+        } catch { return { ok: false, error: 'Conversation DO unavailable' }; }
+      }
+      return { ok: false, error: 'A2A not configured — set AEGIS_AGENT_DO binding' };
+    }
+
+    case 'a2a_get_messages': {
+      if (env.AEGIS_AGENT_DO) {
+        try {
+          const convs = [getConversationId(args.agent, 'commander-01'), getConversationId(args.agent, 'security-02'), getConversationId(args.agent, 'network-01'), getConversationId(args.agent, 'telemetry-03'), getConversationId(args.agent, 'change-01'), getConversationId(args.agent, 'skeptic-01'), getConversationId(args.agent, 'verifier-01'), getConversationId(args.agent, 'executor-01')];
+          const all = [];
+          for (const c of convs) {
+            try {
+              const conv = env.AEGIS_AGENT_DO.get(c);
+              const res = await conv.fetch(new Request(`https://internal/getMessages?action=getMessages&agent=${encodeURIComponent(args.agent)}&limit=${args.limit || 50}`));
+              const msgs = await res.json();
+              all.push(...msgs);
+            } catch {}
+          }
+          all.sort((a, b) => b.timestamp - a.timestamp);
+          return { messages: all.slice(0, args.limit || 50), count: all.length };
+        } catch { return { messages: [], count: 0 }; }
+      }
+      return { messages: [], count: 0 };
+    }
+
+    case 'a2a_broadcast': {
+      const { from, content, type: msgType = 'announcement' } = args;
+      if (env.AEGIS_AGENT_DO) {
+        try {
+          const state = await loadState(env);
+          const agents = (state.entities?.GovernedAgent || []).map(a => a.agent_key).filter(a => a !== from);
+          let delivered = 0;
+          for (const agent of agents) {
+            const convId = getConversationId(from, agent);
+            const conv = env.AEGIS_AGENT_DO.get(convId);
+            try {
+              await conv.fetch(new Request('https://internal/sendMessage?action=sendMessage', {
+                method: 'POST', headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ from, to: agent, content, type: msgType }),
+              }));
+              delivered++;
+            } catch {}
+          }
+          return { ok: true, deliveredTo: delivered, totalAgents: agents.length };
+        } catch { return { ok: false, error: 'Broadcast failed' }; }
+      }
+      return { ok: false, error: 'A2A not configured' };
+    }
+
+    case 'run_jiuwen': {
+      const { query, context_id } = args;
+      try {
+        const { jiuwenDispatch } = await import('../server/integrations.mjs');
+        const result = await jiuwenDispatch({ query, contextId: context_id || 'aegis-demo' });
+        return { ok: true, mode: result.mode, text: result.text?.slice(0, 2000) || 'No text returned', raw: result.raw };
+      } catch (e) {
+        return { ok: false, mode: 'ERROR', error: e.message };
+      }
+    }
+
     default:
       return { error: `Unknown tool: ${toolName}` };
   }
-}
-
-async function loadAgentState(env) {
-  const { loadState } = await import('./kv-store.mjs');
-  return loadState();
 }
