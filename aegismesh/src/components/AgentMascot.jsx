@@ -1,21 +1,22 @@
 import { cn } from '@/lib/utils';
 
-const ROLE_SYMBOLS = {
-  'commander-01': '◈',
-  'telemetry-03': '◎',
-  'security-02': '▣',
-  'network-01': '◌',
-  'change-01': '△',
-  'skeptic-01': '✦',
-  'verifier-01': '⚖',
-  'executor-01': '⟡',
+const AGENT_IMAGES = {
+  'commander-01': '/agents/1.png',
+  'telemetry-03': '/agents/2.png',
+  'security-02': '/agents/3.png',
+  'network-01': '/agents/4.png',
+  'change-01': '/agents/5.png',
+  'skeptic-01': '/agents/6.png',
+  'verifier-01': '/agents/7.png',
+  // The Arena has eight agent records but seven supplied portraits.
+  'executor-01': '/agents/1.png',
 };
 
 export function AgentMascot({ agent, size = 64, animate = true, className }) {
   const color = agent.color || '#22d3ee';
   const quarantined = agent.status === 'QUARANTINED';
   const fill = quarantined ? '#64748b' : color;
-  const symbol = ROLE_SYMBOLS[agent.id] || '◉';
+  const image = AGENT_IMAGES[agent.id];
 
   return (
     <div
@@ -32,16 +33,17 @@ export function AgentMascot({ agent, size = 64, animate = true, className }) {
       }}
     >
       <div
-        className={cn('flex items-center justify-center rounded-full text-center font-black tracking-tight', animate && agent.status === 'INVESTIGATING' ? 'animate-aegis-pulse' : '')}
+        className={cn('flex items-center justify-center overflow-hidden rounded-full text-center font-black tracking-tight', animate && agent.status === 'INVESTIGATING' ? 'animate-aegis-pulse' : '')}
         style={{
-          width: size * 0.68,
-          height: size * 0.68,
-          color: fill,
-          background: 'rgba(15, 23, 42, 0.95)',
-          fontSize: Math.max(18, size * 0.26),
+          width: size * 0.96,
+          height: size * 0.96,
         }}
       >
-        {symbol}
+        {image ? (
+          <img src={image} alt={`${agent.name} avatar`} className="h-full w-full object-cover" />
+        ) : (
+          <span style={{ color: fill, fontSize: Math.max(18, size * 0.26) }}>◉</span>
+        )}
       </div>
 
       {quarantined && (

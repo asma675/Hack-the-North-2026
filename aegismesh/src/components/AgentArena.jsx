@@ -1,19 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { AgentMascot } from '@/components/AgentMascot';
-import { StatusBadge, TrustScore } from '@/components/aegis';
+import { TrustScore } from '@/components/aegis';
 import { useAegis } from '@/lib/useAegis';
 
 // Arena layout — spacious hex-grid spread to prevent bubble overlap
 const POSITIONS = {
-  'commander-01': { x: 50, y: 10 },
-  'security-02':  { x: 14, y: 28 },
-  'network-01':   { x: 86, y: 28 },
-  'skeptic-01':   { x: 50, y: 44 },
-  'telemetry-03': { x: 10, y: 60 },
-  'change-01':    { x: 90, y: 60 },
-  'verifier-01':  { x: 26, y: 76 },
-  'executor-01':  { x: 74, y: 76 },
+  'commander-01': { x: 50, y: 14 },
+  'security-02':  { x: 14, y: 32 },
+  'network-01':   { x: 86, y: 32 },
+  'skeptic-01':   { x: 50, y: 48 },
+  'telemetry-03': { x: 10, y: 65 },
+  'change-01':    { x: 90, y: 65 },
+  'verifier-01':  { x: 34, y: 85 },
+  'executor-01':  { x: 66, y: 85 },
 };
 
 // Personality traits per agent for unique visual identity
@@ -26,28 +26,6 @@ const PERSONALITIES = {
   'skeptic-01':   { aura: 'rgba(251,146,60,0.10)', ringStyle: 'solid' },
   'verifier-01':  { aura: 'rgba(34,211,238,0.10)', ringStyle: 'double' },
   'executor-01': { aura: 'rgba(188,140,255,0.10)', ringStyle: 'dashed' },
-};
-
-const ROLE_LABELS = {
-  'commander-01': '⚔ LEAD',
-  'security-02':  '🛡 GUARD',
-  'network-01':   '🌐 RELAY',
-  'telemetry-03': '📡 SCAN',
-  'change-01':    '⚙ SHIFT',
-  'skeptic-01':   '🔍 DOUBT',
-  'verifier-01':  '✓ PROOF',
-  'executor-01':  '⚡ ACT',
-};
-
-const ROLE_COLORS = {
-  'commander-01': '#22d3ee',
-  'security-02': '#a78bfa',
-  'network-01': '#34d399',
-  'telemetry-03': '#fbbf24',
-  'change-01': '#f472b6',
-  'skeptic-01': '#fb923c',
-  'verifier-01': '#22d3ee',
-  'executor-01': '#bc8cff',
 };
 
 export function AgentArena({ incidentId, compact = false }) {
@@ -71,13 +49,6 @@ export function AgentArena({ incidentId, compact = false }) {
     ? agents.filter(a => a.current_incident_id === incidentId || a.status === 'QUARANTINED')
     : agents;
 
-  const latestMessages = {};
-  events.forEach(e => {
-    if (e.type === 'agent.message' || e.type === 'agent.challenge') {
-      latestMessages[e.data.agent_id] = e;
-    }
-  });
-
   return (
     <div className="relative w-full" ref={arenaRef}>
       {challengeLine && (
@@ -87,7 +58,7 @@ export function AgentArena({ incidentId, compact = false }) {
       <div
         className={cn(
           'relative w-full overflow-hidden rounded-xl border border-border/60 bg-slate-950/40',
-          compact ? 'h-[440px]' : 'h-[620px] md:h-[700px]'
+          compact ? 'h-[580px]' : 'h-[860px] md:h-[1000px]'
         )}
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.06),_transparent_50%)]" />
@@ -117,23 +88,16 @@ export function AgentArena({ incidentId, compact = false }) {
           const pos = POSITIONS[agent.id];
           if (!pos) return null;
 
-          const msg = latestMessages[agent.id];
-          const isChallenging = agent.status === 'CHALLENGING';
           const isChallenged = agent.status === 'CHALLENGED';
           const personality = PERSONALITIES[agent.id] || { aura: 'transparent', ringStyle: 'solid' };
-          const sideOffset = pos.x < 40 ? -24 : pos.x > 60 ? 24 : 0;
 
           return (
             <div
               key={agent.id}
-              className="absolute z-10 w-[130px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-[1.04]"
+              className="absolute z-10 w-[200px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-[1.04]"
               style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               onClick={() => setSelected(agent)}
             >
-              {msg && !compact && (
-                <SpeechBubble event={msg} agent={agent} isChallenging={isChallenging} sideOffset={sideOffset} />
-              )}
-
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
@@ -144,11 +108,11 @@ export function AgentArena({ incidentId, compact = false }) {
                     isChallenged && 'ring-2 ring-amber-500/50 ring-offset-2 ring-offset-slate-950'
                   )}
                   style={{
-                    padding: compact ? 5 : 7,
+                    padding: compact ? 2 : 2,
                     background: `radial-gradient(circle, ${personality.aura} 0%, transparent 70%)`,
                   }}
                 >
-                  <AgentMascot agent={agent} size={compact ? 48 : 64} />
+                  <AgentMascot agent={agent} size={compact ? 180 : 220} />
                   {agent.status === 'INVESTIGATING' && (
                     <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-slate-950 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
                   )}
@@ -162,28 +126,10 @@ export function AgentArena({ incidentId, compact = false }) {
                     />
                   )}
                 </div>
-
-                <div className="mt-1.5 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <span className={cn('text-[10px] font-medium leading-tight', agent.status === 'QUARANTINED' ? 'text-slate-500' : 'text-slate-100')}>
-                      {agent.name}
-                    </span>
-                    {!compact && ROLE_LABELS[agent.id] && (
-                      <span className="text-[7px] aegis-mono font-bold tracking-wider px-1 py-0.5 rounded-[1px]" style={{ color: ROLE_COLORS[agent.id], background: `${ROLE_COLORS[agent.id]}15`, border: `1px solid ${ROLE_COLORS[agent.id]}30` }}>
-                        {ROLE_LABELS[agent.id]}
-                      </span>
-                    )}
-                  </div>
-                  {!compact && (
-                    <div className="mt-1 flex justify-center">
-                      <TrustScore score={agent.trust_score} size="sm" />
-                    </div>
-                  )}
-                  {!compact && agent.status !== 'IDLE' && (
-                    <div className="mt-1.5 flex justify-center">
-                      <StatusBadge status={agent.status} className="px-1.5 py-0.5 text-[8px]" />
-                    </div>
-                  )}
+                <div className="mt-2 text-center">
+                  <span className={cn('text-xs font-medium', agent.status === 'QUARANTINED' ? 'text-slate-500' : 'text-slate-100')}>
+                    {agent.name}
+                  </span>
                 </div>
               </div>
             </div>
@@ -194,95 +140,6 @@ export function AgentArena({ incidentId, compact = false }) {
       {selected && (
         <AgentDetailPopover agent={selected} events={events} onClose={() => setSelected(null)} />
       )}
-    </div>
-  );
-}
-
-function SpeechBubble({ event, agent, isChallenging, sideOffset = 0 }) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 80);
-    return () => clearTimeout(t);
-  }, []);
-
-  const text = event.data.short || event.data.full;
-  const color = agent.color || '#22d3ee';
-  const confidence = event.data.confidence;
-  const time = new Date(event.ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-  return (
-    <div
-      className={cn(
-        'absolute bottom-full mb-1 left-1/2 -translate-x-1/2 max-w-[180px] min-w-[120px] transition-all duration-500 ease-out',
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-      )}
-      style={{ zIndex: 20, marginLeft: `${sideOffset}px` }}
-    >
-      <div
-        className={cn(
-          'relative overflow-hidden',
-          isChallenging
-            ? 'border border-pink-500/25 bg-pink-500/[0.06]'
-            : 'border border-border/70 bg-[#10131c]/85'
-        )}
-        style={{
-          boxShadow: `0 2px 12px -4px ${color}25, 0 0 0 1px ${color}08, inset 0 1px 0 ${color}12`,
-          backdropFilter: 'blur(12px)',
-          borderRadius: '2px',
-        }}
-      >
-        <div className="h-[2px] w-full relative overflow-hidden">
-          <div style={{ background: `linear-gradient(90deg, transparent, ${color}80, transparent)` }} className="h-full w-full" />
-          <div className="absolute inset-0" style={{ background: `linear-gradient(90deg, transparent, ${color}30, transparent)`, animation: 'aegis-bubble-scan 3s ease-in-out infinite' }} />
-        </div>
-        <div className="absolute left-0 top-[2px] bottom-0 w-[3px] animate-aegis-bubble-bar" style={{ background: color, boxShadow: `0 0 6px ${color}80, 0 0 12px ${color}40` }} />
-        <div className="px-2.5 pt-2 pb-1.5 pl-[12px]">
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[8px] aegis-mono uppercase tracking-[0.14em] font-bold" style={{ color }}>
-              {agent.name}
-            </span>
-            <span className="text-[7px] aegis-mono text-muted-foreground/70">{time}</span>
-          </div>
-          <div className="text-[10px] leading-snug text-foreground/85">{text}</div>
-          {confidence != null && (
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <div className="flex-1 h-[2px] rounded-full bg-border overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${confidence * 100}%`, background: color, boxShadow: `0 0 4px ${color}60` }}
-                />
-              </div>
-              <span className="text-[7px] aegis-mono font-bold" style={{ color }}>{Math.round(confidence * 100)}%</span>
-            </div>
-          )}
-          {event.data.tool && (
-            <div className="mt-1 text-[7px] aegis-mono text-muted-foreground/60">
-              ↳ {event.data.tool}
-            </div>
-          )}
-        </div>
-        {isChallenging && (
-          <div className="px-2.5 pb-1.5 pl-[12px]">
-            <span className="inline-block text-[7px] aegis-mono font-bold uppercase tracking-[0.15em] text-pink-400 bg-pink-500/10 border border-pink-500/20 px-1.5 py-0.5 rounded-[1px]">
-              ⚑ CHALLENGED
-            </span>
-          </div>
-        )}
-      </div>
-      <div className="flex justify-center">
-        <div
-          className="w-0 h-0"
-          style={{
-            borderLeft: '5px solid transparent',
-            borderRight: '5px solid transparent',
-            borderTop: `5px solid ${isChallenging ? 'rgba(244,114,182,0.18)' : 'rgba(16,19,28,0.9)'}`,
-            filter: `drop-shadow(0 -1px 2px ${color}25)`,
-          }}
-        />
-      </div>
-      <div className="flex justify-center" style={{ marginTop: '-4px' }}>
-        <div className="w-[2px] h-[2px] rounded-full" style={{ background: color, opacity: 0.6 }} />
-      </div>
     </div>
   );
 }
@@ -317,7 +174,7 @@ function AgentDetailPopover({ agent, events, onClose }) {
       <div className="aegis-panel max-w-lg w-full mx-4 rounded-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between p-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <AgentMascot agent={agent} size={56} />
+            <AgentMascot agent={agent} size={100} />
             <div>
               <div className="font-display font-bold text-lg">{agent.name}</div>
               <div className="text-xs text-muted-foreground">{agent.role}</div>
