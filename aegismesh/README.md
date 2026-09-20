@@ -99,6 +99,48 @@ npm run dev
 
 All integrations run as **SIMULATED** when API keys are absent — never falsely shown as LIVE.
 
+### Local process bridge
+
+The control-plane UI can connect to an optional local process at `http://localhost:8788`.
+When the authenticated app is open, it publishes the current incident and agent state
+to `POST /state` on every engine event and once per second. It also polls `GET /approvals`
+every 500 ms and routes fingerprint approvals through the same approval path as the UI.
+Connection failures are ignored, so the bridge never blocks or changes the app when the
+local process is unavailable.
+
+Start the local process separately when needed:
+
+```bash
+cd p2p-test
+node sidecar.js
+```
+
+The state payload is:
+
+```json
+{
+  "incidentState": "APPROVAL",
+  "agents": {
+    "executor-01": "INVESTIGATING"
+  }
+}
+```
+
+`incidentState` is normalized to one of `IDLE`, `DETECTED`, `TRIAGE`,
+`INVESTIGATING`, `CONTESTING`, `CONSENSUS`, `SIMULATING`, `APPROVAL`,
+`EXECUTING`, `VERIFYING`, or `CONTAINED`. Agent values are normalized to
+`IDLE`, `INVESTIGATING`, or `QUARANTINED`.
+
+The approval endpoint returns:
+
+```json
+{
+  "approvals": [{ "source": "fingerprint", "ts": 123 }]
+}
+```
+
+Approvals are applied only while an action is waiting in `APPROVAL`.
+
 ### Production-style local run
 
 ```bash

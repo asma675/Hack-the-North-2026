@@ -301,6 +301,154 @@ export const SCRIPTS = {
 
 // ---- Engine ----
 
+// ---- Dynamic scenario engine ----
+// Generates varied, non-scripted multi-agent conversations each run.
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function pick(arr) { return arr[rand(0, arr.length - 1)]; }
+function pickN(arr, n) { const c = [...arr]; for (let i = c.length - 1; i > 0; i--) { const j = rand(0, i); [c[i], c[j]] = [c[j], c[i]]; } return c.slice(0, n); }
+function randomIP() { return `${rand(1,223)}.${rand(0,255)}.${rand(0,255)}.${rand(1,254)}`; }
+function randomInternalIP() { return `10.0.${rand(1,10)}.${rand(1,254)}`; }
+function randomPort() { return pick([80, 443, 8080, 3306, 5432, 22, 21, 53, 110, 143, 993, 995, 8443, 8888, 9000, 9200, 6379, 5672]); }
+function randomProcess() { return pick(['kworker-worker', 'systemd-update', 'svchost-net', 'dns-resolver', 'nginx-proxy', 'apache2-child', 'mysqld-tmp', 'redis-daemon', 'sshd-backup', 'cron-exec', 'python-svc', 'node-worker', 'java-spark', 'docker-init', 'etcd-agent']); }
+function randomFile() { return pick(['/var/log/auth.log', '/etc/crontab', '/tmp/.hidden-svc', '/opt/backup/run.sh', '/home/deploy/.bashrc', '/var/spool/cron/root', '/proc/3127/exe', '/usr/local/bin/svc-check', '/etc/ssh/sshd_config', '/var/lib/docker/containers/json']); }
+function randomAsset() { return pick(['victim-pi-01', 'prod-db-02', 'web-srv-03', 'auth-srv-01', 'api-gw-04', 'cache-node-02', 'queue-srv-01', 'storage-03']); }
+function randomUser() { return pick(['deploy', 'admin', 'svc-backup', 'root', 'appuser', 'ci-runner', 'monitor', 'etl-bot']); }
+function randomHash() { return Array.from({length:12}, () => pick('0123456789abcdef'.split(''))).join(''); }
+function randomTimestamp() { return `${rand(0,23).toString().padStart(2,'0')}:${rand(0,59).toString().padStart(2,'0')}:${rand(0,59).toString().padStart(2,'0')}`; }
+function randomDuration() { return pick(['3 minutes', '8 minutes', '15 minutes', '2 hours', '45 seconds', '12 minutes', '1 hour', '30 seconds']); }
+function randomMegabytes() { return `${rand(50,5000)}MB`; }
+function randomConfidence() { return Math.min(0.99, Math.max(0.4, parseFloat((Math.random() * 0.6 + 0.3).toFixed(2)))); }
+
+const THREAT_TYPES = [
+  { id: 'credential', title: 'Credential Compromise', severity: 'CRITICAL', baseHypothesis: 'Credential compromise', indicators: ['Failed login attempts', 'Authentication anomalies', 'Unknown process spawned'] },
+  { id: 'exfiltration', title: 'Data Exfiltration', severity: 'CRITICAL', baseHypothesis: 'Data exfiltration in progress', indicators: ['Large outbound transfer', 'Unusual data volume', 'Encrypted payload to unknown host'] },
+  { id: 'malware', title: 'Malware Outbreak', severity: 'HIGH', baseHypothesis: 'Malware infection detected', indicators: ['Malicious binary detected', 'Lateral movement observed', 'C2 communication identified'] },
+  { id: 'insider', title: 'Insider Threat', severity: 'HIGH', baseHypothesis: 'Insider data access anomaly', indicators: ['After-hours access', 'Sensitive file access', 'Unauthorized download pattern'] },
+  { id: 'ddos', title: 'DDoS Attack', severity: 'HIGH', baseHypothesis: 'Distributed denial of service', indicators: ['Traffic spike from botnet', 'Service degradation', 'Reflective amplification detected'] },
+  { id: 'supply_chain', title: 'Supply Chain Compromise', severity: 'CRITICAL', baseHypothesis: 'Supply chain integrity breach', indicators: ['Modified dependency', 'Malicious code injection', 'Persistence mechanism detected'] },
+];
+
+const SPECIALIST_AGENTS = ['telemetry-03', 'security-02', 'network-01', 'change-01'];
+
+function generateInvestigationMessage(agentId, threat, evidence) {
+  const role = agentId;
+  const ip = randomIP();
+  const internalIp = randomInternalIP();
+  const process = randomProcess();
+  const port = randomPort();
+  const duration = randomDuration();
+  const mb = randomMegabytes();
+
+  switch (role) {
+    case 'telemetry-03':
+      return {
+        short: `Anomaly on ${threat.asset}: ${process} consuming resources.`,
+        full: `Detected sustained resource anomaly on ${threat.asset} over ${duration}. Process "${process}" (PID ${rand(1000,9999)}) consuming ${rand(60,95)}% CPU with ${mb} memory. Process hash: sha256:${randomHash()}. Not in approved baseline. Spawning pattern observed every ${rand(30,300)}s. Disk I/O elevated at ${rand(40,90)} MB/s. System uptime: ${rand(1,720)}h. Last reboot: ${rand(1,90)} days ago.`,
+        tool: 'cpu.probe',
+      };
+    case 'security-02':
+      return {
+        short: threat.id === 'credential' ? `Auth anomaly from external source.` : threat.id === 'insider' ? `Unauthorized access pattern detected.` : `Malicious identity behavior identified.`,
+        full: threat.id === 'credential'
+          ? `${rand(10,30)} failed authentication attempts from ${ip} over ${rand(1,5)} minutes, then successful login as "${randomUser()}" from ${ip}. Account has ${pick(['no 2FA', 'expired MFA', 'shared credentials'])}. Source IP has no prior history. Threat intel flags ${ip} as a ${pick(['known brute-force origin', 'TOR exit node', 'botnet C2'])}.`
+          : threat.id === 'insider'
+          ? `"${randomUser()}" accessed ${rand(50,5000)} sensitive records outside business hours (${randomTimestamp()}). Access pattern deviates from ${rand(7,30)}-day baseline by ${rand(80,99)}%. Downloaded ${mb} to unrecognized device.`
+          : `Identity "${randomUser()}" executed ${rand(3,15)} actions matching ${pick(['known APT technique', 'lateral movement pattern', 'privilege escalation method'])} TTPs. Authentication from ${ip} lacks expected ${pick(['certificate pinning', 'session token', 'hardware key'])} verification.`,
+        tool: 'auth.audit',
+      };
+    case 'network-01':
+      return {
+        short: `New outbound connection to ${ip}:${port} — not in baseline.`,
+        full: `Discovered new outbound TCP connection from ${threat.asset} to ${ip}:${port}. Destination absent from 90-day network baseline. ${pick(['No DNS resolution — raw IP', 'DNS resolves to recently-registered domain', 'Connection bypasses egress filter'])}. Connection sustained for ${rand(5,60)} minutes, ${mb} transferred. Traffic ${pick(['encrypted', 'obfuscated', 'unencrypted but patterned'])}. ${pick(['Started immediately after login', 'Periodic beacon every ' + rand(10,120) + 's', 'Burst pattern during off-hours'])}.`,
+        tool: 'flow.analyze',
+      };
+    case 'change-01':
+      return {
+        short: threat.id === 'supply_chain' ? `Dependency modification detected.` : `No approved changes explain this activity.`,
+        full: threat.id === 'supply_chain'
+          ? `${pick(['npm package', 'pip dependency', 'container base image', 'system library'])} "${pick(['lodash', 'axios', 'express', 'openssl', 'requests'])}" updated ${pick(['yesterday', '2 days ago', '6 hours ago'])}. Hash changed from ${randomHash()} to ${randomHash()}. ${rand(3,20)} downstream services affected. Malicious payload signature detected in update diff.`
+          : `No approved deployments, maintenance windows, or config changes in last ${rand(2,24)} hours. "${randomUser()}" account has no scheduled automation at this time. No change tickets reference this activity. Change window: next approved in ${rand(1,72)}h ${rand(0,59)}m.`,
+        tool: 'schedule.lookup',
+      };
+    default:
+      return { short: 'Investigating anomaly.', full: 'Gathering evidence.', tool: 'generic.check' };
+  }
+}
+
+function generateSkepticChallenge(threat, evidenceFromSpecialists) {
+  const challenges = [
+    `The ${pick(['CPU pattern', 'login anomaly', 'network behavior', 'file access', 'process activity'])} alone doesn't prove ${threat.baseHypothesis.toLowerCase()}. What does ${pick(['the backup window', 'normal operations', 'scheduled task', 'user activity'])} NOT explain?`,
+    `Could this be ${pick(['a legitimate automation', 'scheduled maintenance', 'load testing', 'disaster recovery drill', 'vendor remote session'])}? Show me evidence that rules this out.`,
+    `The ${evidenceFromSpecialists.length} findings so far have ${pick(['conflicting', 'overlapping', 'partial'])} confidence. Which evidence is strongest and most independently verifiable?`,
+    `If this were benign, what would the ${pick(['timeline', 'network pattern', 'auth log', 'process tree'])} look like? Does reality match that model?`,
+    `I need a counterfactual: simulate the scenario where ${pick(['the backup is benign', 'no attacker is present', 'this is normal traffic', 'the account is legitimate'])} and tell me what evidence would be different.`,
+  ];
+  return {
+    short: pick(challenges).slice(0, 80),
+    full: pick(challenges),
+    tool: 'counterfactual.test',
+  };
+}
+
+function generateSpecialistRebuttal(challenger, specialistId, threat) {
+  const rebuttals = {
+    'telemetry-03': {
+      short: `Process behavior inconsistent with benign automation.`,
+      full: `Answering ${challenger}: the "${randomProcess()}" process shows resource consumption patterns inconsistent with any known automation. ${pick(['No cron/scheduled job triggers this behavior', 'Process binary hash does not match any approved release', 'Memory allocation pattern matches known exploit signature', 'Parent process tree does not match automation context'])}. Confidence in malicious attribution: ${Math.round(randomConfidence() * 100)}%.`,
+    },
+    'security-02': {
+      short: `Authentication source cannot be explained by normal ops.`,
+      full: `Answering ${challenger}: legitimate automation uses key-based auth from ${randomInternalIP()}. This authentication used ${pick(['password', ' expired token', 'broken certificate'])} from external ${randomIP()}. No automation is configured for this source, time, or method. ${rand(3,8)} factor deviation from baseline behavior.`,
+    },
+    'network-01': {
+      short: `Destination not reachable through normal service paths.`,
+      full: `Answering ${challenger}: this connection target ${randomIP()}:${randomPort()} is absent from all service mesh routes, DNS records, and firewall allow-lists. ${pick(['No monitoring agent reports this endpoint', 'TLS certificate does not match any known service', 'Connection originated outside scheduled backup window', 'Traffic volume exceeds any documented backup transfer'])} by ${rand(5,50)}x.`,
+    },
+    'change-01': {
+      short: `Change window does not align with this activity.`,
+      full: `Answering ${challenger}: the nearest approved change window is ${rand(2,48)}h in the future. No change ticket references this asset, time, or action. The "${randomUser()}" account has no automation configured in any change management system across ${rand(3,15)} environments. This activity is unexplained by any approved process.`,
+    },
+  };
+  return rebuttals[specialistId] || { short: `Evidence supports the concern.`, full: `Answering ${challenger}: the evidence indicates this is not consistent with expected behavior.`, tool: 'evidence.audit' };
+}
+
+function generateVerifierVerdict(threat, hypothesis, confidence, isReal) {
+  if (!isReal) {
+    return {
+      verdict: 'BENIGN ACTIVITY',
+      confidence: Math.min(0.95, confidence + 0.05),
+      recommended: 'NO ACTION',
+      reason: `Observed activity matches ${pick(['scheduled backup behavior', 'normal operational pattern', 'approved change window', 'vendor maintenance schedule'])}. No authentication anomalies. No outbound deviations. Historical correlation ${Math.round(randomConfidence() * 100)}%.`,
+      hypotheses: [{ title: threat.baseHypothesis, confidence: confidence }, { title: 'Normal operations', confidence: Math.min(0.95, confidence + 0.15) }],
+    };
+  }
+  const counterfactuals = [
+    { option: 'FULL SHUTDOWN', containment: 'HIGH', forensics: 'LOW', impact: 'CRITICAL' },
+    { option: 'NETWORK ISOLATION', containment: 'HIGH', forensics: 'HIGH', impact: 'MEDIUM' },
+    { option: 'OBSERVE ONLY', containment: 'LOW', forensics: 'HIGH', impact: 'LOW SECURITY EXPOSURE' },
+    { option: 'RESTRICT USER', containment: 'MEDIUM', forensics: 'HIGH', impact: 'MEDIUM' },
+  ];
+  return {
+    verdict: threat.title,
+    confidence: Math.min(0.98, confidence + 0.05),
+    recommended: 'NETWORK ISOLATION',
+    reason: `Contains threat while preserving forensic evidence. Least-destructive action that accomplishes objective. ${rand(3,8)} independent evidence sources converge on this conclusion.`,
+    hypotheses: [{ title: threat.baseHypothesis, confidence }, { title: 'Benign explanation', confidence: Math.max(0.05, 1 - confidence - 0.1) }, { title: pick(['Partial compromise', 'External vendor activity', 'System malfunction']), confidence: rand(0.02, 0.15) }],
+    counterfactuals: pickN(counterfactuals, 3),
+  };
+}
+
+function generateExecutorAction(threat) {
+  const actions = [
+    { action: 'network.isolate', target: `${threat.asset}`, risk: 'HIGH', blast_radius: 'single-host', reversible: true, required_permission: 'network.write' },
+    { action: 'account.disable', target: `${randomUser()}@${threat.asset}`, risk: 'HIGH', blast_radius: 'single-account', reversible: true, required_permission: 'account.disable' },
+    { action: 'process.terminate', target: randomProcess(), risk: 'MEDIUM', blast_radius: 'process', reversible: true, required_permission: 'hardware.execute' },
+    { action: 'traffic.throttle', target: `${randomIP()}:${randomPort()}`, risk: 'MEDIUM', blast_radius: 'network-segment', reversible: true, required_permission: 'network.write' },
+  ];
+  return pick(actions);
+}
+
 class AegisEngine {
   constructor() {
     this.listeners = new Set();
@@ -526,6 +674,100 @@ class AegisEngine {
     });
   }
 
+  runDynamic() {
+    const threatType = pick(THREAT_TYPES);
+    const asset = randomAsset();
+    const threat = { ...threatType, asset };
+    const incidentId = `INC-${randomTimestamp().replace(/:/g, '')}-${rand(100, 999)}`;
+    const steps = [];
+
+    // 1. Incident created
+    steps.push({ t: 0, type: 'incident.created', data: { id: incidentId, title: threat.title, severity: threat.severity, state: 'DETECTED', affected_assets: [asset] } });
+    steps.push({ t: 300, type: 'incident.state_changed', data: { id: incidentId, state: 'TRIAGE' } });
+
+    // 2. Commander detects and decomposes
+    const specialists = pickN(SPECIALIST_AGENTS, rand(3, 4));
+    const commanderMsg = {
+      short: `${threat.baseHypothesis} suspected on ${asset}. Launching investigation.`,
+      full: `Anomaly detected on ${asset}: ${threat.indicators[0]}, ${threat.indicators[1]}, ${threat.indicators[2]}. Decomposing investigation among: ${specialists.map(s => s.replace('-01','').replace('-02','').replace('-03','')).join(', ')}. Swarm online. Investigating ${randomDuration()} window.`,
+      tool: 'incident.decompose',
+    };
+    steps.push({ t: 800, type: 'agent.joined', data: { agent_id: 'commander-01', incident_id: incidentId } });
+    steps.push({ t: 1200, type: 'agent.started', data: { agent_id: 'commander-01', task: 'Decompose investigation' } });
+    steps.push({ t: 1600, type: 'agent.message', data: { agent_id: 'commander-01', ...commanderMsg, confidence: null } });
+
+    // 3. Specialists join and investigate in parallel
+    specialists.forEach((agentId, i) => {
+      const delay = 2000 + i * 600;
+      steps.push({ t: delay, type: 'agent.joined', data: { agent_id: agentId, incident_id: incidentId } });
+      steps.push({ t: delay + 400, type: 'agent.started', data: { agent_id: agentId, task: `Investigate ${threat.baseHypothesis}` } });
+    });
+
+    // 4. Each specialist reports findings (staggered)
+    const evidenceEvents = [];
+    specialists.forEach((agentId, i) => {
+      const delay = 3000 + i * 800;
+      const msg = generateInvestigationMessage(agentId, threat, evidenceEvents);
+      steps.push({ t: delay, type: 'agent.message', data: { agent_id: agentId, ...msg, confidence: randomConfidence() } });
+      steps.push({ t: delay + 400, type: 'evidence.created', data: { incident_id: incidentId, agent_id: agentId, title: msg.short, type: 'observation', source: msg.tool, reliability: 0.92, confidence: randomConfidence(), supports: pick(['h-suspicious', 'h-compromise', 'h-anomaly', 'h-exfiltration', 'h-threat']) } });
+      evidenceEvents.push({ agentId, title: msg.short });
+    });
+
+    // 5. Hypothesis update
+    steps.push({ t: 7000, type: 'hypothesis.updated', data: { incident_id: incidentId, title: threat.baseHypothesis, confidence: randomConfidence() } });
+
+    // 6. Skeptic challenges (if enough specialists)
+    if (specialists.length >= 3) {
+      const skeptic = 'skeptic-01';
+      steps.push({ t: 8500, type: 'agent.joined', data: { agent_id: skeptic, incident_id: incidentId } });
+      const challenge = generateSkepticChallenge(threat, evidenceEvents);
+      const target = pick(specialists);
+      steps.push({ t: 9500, type: 'agent.challenge', data: { agent_id: skeptic, target, ...challenge, confidence: null } });
+
+      // 7. Specialist responds to challenge
+      const responder = pick(specialists.filter(a => a !== target));
+      const rebuttal = generateSpecialistRebuttal(skeptic, responder, threat);
+      steps.push({ t: 11000, type: 'agent.message', data: { agent_id: responder, ...rebuttal, confidence: randomConfidence() } });
+      steps.push({ t: 11500, type: 'evidence.created', data: { incident_id: incidentId, agent_id: responder, title: rebuttal.short, type: 'counter-evidence', source: rebuttal.tool, reliability: 0.88, confidence: randomConfidence() } });
+
+      // 8. Skeptic may challenge again
+      if (Math.random() > 0.5) {
+        const secondChallenge = generateSkepticChallenge(threat, [...evidenceEvents, { agentId: responder, title: rebuttal.short }]);
+        steps.push({ t: 13000, type: 'agent.challenge', data: { agent_id: skeptic, target: responder, ...secondChallenge, confidence: null } });
+        const secondResponder = pick(specialists);
+        const secondRebuttal = generateSpecialistRebuttal(skeptic, secondResponder, threat);
+        steps.push({ t: 14500, type: 'agent.message', data: { agent_id: secondResponder, ...secondRebuttal, confidence: randomConfidence() } });
+      }
+    }
+
+    // 9. Verifier evaluates
+    const isReal = Math.random() > 0.2; // 80% chance of real threat
+    const verifierConfidence = randomConfidence();
+    steps.push({ t: 16000, type: 'verifier.started', data: { incident_id: incidentId } });
+    const verdict = generateVerifierVerdict(threat, threat.baseHypothesis, verifierConfidence, isReal);
+    steps.push({ t: 20000, type: 'verifier.verdict', data: { incident_id: incidentId, ...verdict } });
+
+    // 10. State changes based on verdict
+    if (isReal) {
+      steps.push({ t: 21000, type: 'incident.state_changed', data: { id: incidentId, state: 'CONTESTING' } });
+      steps.push({ t: 22000, type: 'incident.state_changed', data: { id: incidentId, state: 'CONSENSUS' } });
+
+      // Executor proposes action
+      const action = generateExecutorAction(threat);
+      steps.push({ t: 24000, type: 'action.requested', data: { id: `ACT-${randomHash()}`, incident_id: incidentId, agent_id: 'executor-01', ...action, risk: pick(['HIGH', 'CRITICAL']), required_permission: action.required_permission, status: 'APPROVAL_REQUIRED' } });
+    } else {
+      steps.push({ t: 21000, type: 'incident.state_changed', data: { id: incidentId, state: 'CONTAINED' } });
+      steps.push({ t: 22000, type: 'incident.contained', data: { id: incidentId, reason: 'Evidence does not support threat hypothesis. Activity consistent with benign operations.' } });
+    }
+
+    this.currentScenario = SCENARIO.BREACH;
+    this.startTime = Date.now();
+    steps.forEach(step => {
+      const timer = setTimeout(() => this._log({ type: step.type, data: step.data }), step.t);
+      this.activeTimers.push(timer);
+    });
+  }
+
   injectPoison() {
     this.runScenario(SCENARIO.POISONED);
   }
@@ -534,8 +776,8 @@ class AegisEngine {
   }
 
 
-  approveAction(actionId) {
-    this._log({ type: 'approval.received', data: { action_request_id: actionId, user_id: 'cmdr-01', method: 'NFC', nfc_badge_id: 'BADGE-CMDR-001', decision: 'APPROVED' } });
+  approveAction(actionId, source = 'NFC') {
+    this._log({ type: 'approval.received', data: { action_request_id: actionId, user_id: 'cmdr-01', method: source, nfc_badge_id: 'BADGE-CMDR-001', decision: 'APPROVED' } });
     setTimeout(() => {
       this._log({ type: 'capability.issued', data: { id: 'CAP-2026-0919-001', action_request_id: actionId, incident_id: 'INC-2026-0919-001', target: 'victim-pi-01', command: 'network.isolate', issued_at: '02:14:32', expires_at: '02:14:42', nonce: '0x7a3f91e2', used: false, status: 'ISSUED' } });
       setTimeout(() => {

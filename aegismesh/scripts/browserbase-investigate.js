@@ -2,8 +2,6 @@
 // Run: BROWSERBASE_API_KEY=your_key node scripts/browserbase-investigate.js
 import { Browserbase } from '@browserbasehq/sdk';
 
-const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
-
 const TARGETS = [
   { url: 'https://www.cisa.gov/catalog', task: 'List the top 5 current security vulnerabilities and their CVE identifiers' },
   { url: 'https://www.crowdstrike.com/trust-center/', task: 'Extract SOC 2 compliance status and any public security disclosures' },
@@ -19,6 +17,8 @@ async function main() {
     process.exit(1);
   }
 
+  const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
+
   console.log('🛡️ Vanguard — Browserbase Threat Intel Investigation\n');
   console.log(`📡 ${TARGETS.length} external targets queued for Browserbase verification\n`);
 
@@ -30,7 +30,8 @@ async function main() {
     try {
       const run = await bb.agents.runs.create({
         task: `Navigate to ${target.url}. ${target.task}`,
-        browserSettings: { solveCaptchas: true, verified: true },
+        // Verified browser mode requires a Browserbase Enterprise plan.
+        browserSettings: { solveCaptchas: true, verified: false },
         resultSchema: {
           type: 'object',
           properties: {
@@ -51,13 +52,13 @@ async function main() {
         if (attempts > 24) { status = 'TIMEOUT'; break; }
         await new Promise(r => setTimeout(r, 5000));
         attempts++;
-        const poll = await bb.agents.runs.get(run.runId);
+        const poll = await bb.agents.runs.retrieve(run.runId);
         status = poll.status;
         process.stdout.write(`   Polling... (${attempts}) ${status}\r`);
       }
 
       const elapsed = Date.now() - start;
-      const result = await bb.agents.runs.get(run.runId);
+      const result = await bb.agents.runs.retrieve(run.runId);
       console.log(`   ✅ Completed in ${(elapsed / 1000).toFixed(1)}s — ${status}`);
 
       if (result.result) {

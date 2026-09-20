@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "lint": "eslint . --quiet",
     "smoke": "node scripts/smoke.mjs",
+    "browserbase:demo": "node --env-file=.env scripts/browserbase-investigate.js",
     "check:server": "node --check server/app.mjs && node --check server/index.mjs && node --check server/integrations.mjs && node --check api/[...path].js",
     "smoke:live-contracts": "node scripts/live-contract-smoke.mjs",
     "cf:deploy": "cd cloudflare && npx wrangler deploy",
@@ -23,6 +24,7 @@
     "cf:check": "cd cloudflare && npx wrangler deploy --dry-run"
   },
   "dependencies": {
+    "@browserbasehq/sdk": "^2.20.0",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",

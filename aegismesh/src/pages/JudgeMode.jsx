@@ -16,7 +16,7 @@ const STAGES = [
 ];
 
 export default function JudgeMode() {
-  const { runScenario, injectPoison, approveAction, reset, incidents, agents, metrics, actionRequests, currentScenario, integrations } = useAegis();
+  const { runScenario, runDynamic, injectPoison, approveAction, reset, incidents, agents, metrics, actionRequests, currentScenario, integrations } = useAegis();
   const [stage, setStage] = useState(0);
   const [showNFC, setShowNFC] = useState(false);
   const [showFinal, setShowFinal] = useState(false);
@@ -35,6 +35,7 @@ export default function JudgeMode() {
 
   const handleFalseAlarm = () => { reset(); setStage(0); setShowFinal(false); setTimeout(() => runScenario(SCENARIO.FALSE_ALARM), 200); };
   const handleBreach = () => { reset(); setStage(0); setShowFinal(false); setTimeout(() => runScenario(SCENARIO.BREACH), 200); };
+  const handleDynamic = () => { reset(); setStage(0); setShowFinal(false); setTimeout(() => runDynamic(), 200); };
   const handlePoison = () => { injectPoison(); };
   const handleApprove = () => {
     setShowNFC(true);
@@ -88,6 +89,9 @@ export default function JudgeMode() {
           </button>
           <button onClick={handleBreach} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition">
             <Play className="w-3 h-3" /> Start Breach
+          </button>
+          <button onClick={handleDynamic} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition">
+            <Play className="w-3 h-3" /> Dynamic Threat
           </button>
           <button onClick={handlePoison} disabled={stage < 2} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition disabled:opacity-30">
             <Bug className="w-3 h-3" /> Inject Poison

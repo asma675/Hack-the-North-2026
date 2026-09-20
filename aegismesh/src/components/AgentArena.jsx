@@ -6,14 +6,14 @@ import { useAegis } from '@/lib/useAegis';
 
 // Arena layout — spacious hex-grid spread to prevent bubble overlap
 const POSITIONS = {
-  'commander-01': { x: 50, y: 14 },
-  'security-02':  { x: 14, y: 32 },
-  'network-01':   { x: 86, y: 32 },
-  'skeptic-01':   { x: 50, y: 48 },
-  'telemetry-03': { x: 10, y: 65 },
-  'change-01':    { x: 90, y: 65 },
-  'verifier-01':  { x: 34, y: 85 },
-  'executor-01':  { x: 66, y: 85 },
+  'commander-01': { x: 50, y: 22 },
+  'security-02':  { x: 10, y: 36 },
+  'network-01':   { x: 90, y: 36 },
+  'skeptic-01':   { x: 50, y: 52 },
+  'telemetry-03': { x: 6, y: 68 },
+  'change-01':    { x: 94, y: 68 },
+  'verifier-01':  { x: 30, y: 86 },
+  'executor-01':  { x: 70, y: 86 },
 };
 
 // Personality traits per agent for unique visual identity
@@ -48,6 +48,13 @@ export function AgentArena({ incidentId, compact = false }) {
   const activeAgents = incidentId
     ? agents.filter(a => a.current_incident_id === incidentId || a.status === 'QUARANTINED')
     : agents;
+
+  const latestMessages = {};
+  events.forEach(e => {
+    if (e.type === 'agent.message' || e.type === 'agent.challenge') {
+      latestMessages[e.data.agent_id] = e;
+    }
+  });
 
   return (
     <div className="relative w-full" ref={arenaRef}>
@@ -94,10 +101,44 @@ export function AgentArena({ incidentId, compact = false }) {
           return (
             <div
               key={agent.id}
-              className="absolute z-10 w-[200px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-[1.04]"
+              className="absolute z-10 w-[280px] -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-[1.04] group"
               style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               onClick={() => setSelected(agent)}
             >
+              {latestMessages[agent.id] && !compact && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[160px] animate-aegis-fade-in">
+                  <div
+                    className="relative rounded-lg border px-2.5 py-1.5 backdrop-blur"
+                    style={{
+                      background: 'rgba(15, 23, 42, 0.92)',
+                      borderColor: `${agent.color}40`,
+                      boxShadow: `0 0 12px ${agent.color}20, inset 0 1px 0 ${agent.color}15`,
+                    }}
+                  >
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: agent.color }} />
+                      <span className="text-[8px] aegis-mono font-bold uppercase tracking-wider" style={{ color: agent.color }}>
+                        {agent.name}
+                      </span>
+                      {latestMessages[agent.id].type === 'agent.challenge' && (
+                        <span className="text-[7px] aegis-mono text-pink-400 font-bold ml-auto">
+                          ⚡ CHALLENGE
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[9px] leading-snug text-foreground/80 line-clamp-2">
+                      {latestMessages[agent.id].data.short}
+                    </div>
+                    <div
+                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 border-r border-b"
+                      style={{
+                        background: 'rgba(15, 23, 42, 0.92)',
+                        borderColor: `${agent.color}40`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
